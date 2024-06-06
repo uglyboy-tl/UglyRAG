@@ -1,0 +1,41 @@
+[tool.poetry]
+name = "uglyrag"
+version = "0.1.0"
+description = ""
+authors = ["uglyboy <uglyboy@uglyboy.cn>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+openai = "^1.30.3"
+loguru = "^0.7.2"
+sqlalchemy = "^2.0.30"
+jieba-fast = "^0.53"
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.2.1"
+ruff = "^0.4.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 120 # YOLO
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
+    "F", # pyflakes
+    "I", # isort
+    "C", # flake8-comprehensions
+    "B", # flake8-bugbear
+]
+
+ignore = [
+    "E501", # line too long, handled by black
+    "C901", # too complex
+]
