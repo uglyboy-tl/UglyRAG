@@ -1,5 +1,5 @@
 # Project specific files
-db/
+/data/
 /*.py
 
 # IDE - specific files

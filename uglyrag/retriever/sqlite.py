@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.orm.session import Session
 
 from .base import Retriever
-from .db import Base, BaseDB, Document
+from .database import Base, BaseDB, Document
 from .tokenizer import get_tokenizer
 
 T = TypeVar("T", bound=Base)
@@ -32,7 +32,7 @@ class DataIndex(Base):
 
 @dataclass
 class SQLite(BaseDB, Retriever, Generic[T]):
-    db_url: str = "sqlite:///db/sqlite.db"
+    db_url: str = "sqlite:///data/sqlite.db"
     dataType: Type[T] = Document
 
     # 类变量
