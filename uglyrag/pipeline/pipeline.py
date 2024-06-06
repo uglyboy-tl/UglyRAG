@@ -47,4 +47,5 @@ class BasicPipeline:
 
         logger.info("正在生成答案...")
         result = self.generator(query, contexts)
+        logger.success(f"{result}")
         return result

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Generic, List, Type, TypeVar
 
+from loguru import logger
 from sqlalchemy import Integer, Text, event, schema, select, text
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import Mapped, mapped_column
@@ -55,8 +56,10 @@ class SQLite(BaseDB, Retriever, Generic[T]):
         super()._create_table(Table)
 
     def index(self, docs: List[str]):
+        logger.info("正在构建索引(SQLite FTS5)...")
         for doc in docs:
             self.add(self.dataType.get_instance(doc))
+        logger.success("索引构建完成")
 
     def search(self, query: str) -> List[str]:
         query_list = self.tokenizer(query)
