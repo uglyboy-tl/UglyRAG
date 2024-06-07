@@ -12,7 +12,7 @@ class Item:
     id: int
     question: str
     golden_answers: List[str]
-    medadata: dict = field(default_factory=dict)
+    metadata: dict = field(default_factory=dict)
     output: Dict[str, Any] = field(default_factory=dict)
 
     @classmethod
@@ -76,7 +76,7 @@ class Dataset:
     def __post_init__(self):
         self._dataset_path = Path(self.dataset_path)
         if not self.data:
-            self.data = self._load_data(self.dataset_name, self.dataset_path)
+            self.data = self._load_data()
 
     def _load_data(self):
         """Load data from the provided dataset_path or directly download the file(TODO)."""
@@ -120,6 +120,15 @@ class Dataset:
     def output(self):
         return [item.output for item in self.data]
 
+    def __getattr__(self, attr_name):
+        return [item.__getattr__(attr_name) for item in self.data]
+
+    def get_attr_data(self, attr_name):
+        """For the attributes constructed later (not implemented using property),
+        obtain a list of this attribute in the entire dataset.
+        """
+        return [item[attr_name] for item in self.data]
+
     def __getitem__(self, index):
         return self.data[index]
 
@@ -129,6 +138,13 @@ class Dataset:
     @property
     def data(self):
         return self._data
+
+    @data.setter
+    def data(self, data):
+        self._data = data
+
+    def __repr__(self):
+        return f"Dataset({self.dataset_name}, {len(self.data)} items)"
 
     def save(self, save_path):
         """Save the dataset into the original format."""

@@ -12,12 +12,15 @@ from .metrics import BaseMetric
 
 @dataclass
 class Evaluator:
-    save_dir: str = "Evaluation"
-    save_metric_flag: bool = False
+    save_dir: str
+    save_metric_flag: bool = True
     save_data_flag: bool = False
-    metrics: List[str]
+    metrics: List[str] = field(default_factory=lambda: ["em", "f1", "sub_em", "precision", "recall"])
     avaliable_metrics: Dict[str, Type[BaseMetric]] = field(init=False)
     metric_class: Dict[str, Any] = field(default_factory=dict)
+    metric_setting: Dict[str, Any] = field(
+        default_factory=lambda: {"retrieval_recall_topk": 5, "tokenizer_name": "gpt-4"}
+    )
     _save_dir: Path = field(init=False)
 
     def __post_init__(self):
@@ -27,9 +30,13 @@ class Evaluator:
 
         self.avaliable_metrics = self._collect_metrics()
 
+        config = {
+            "dataset_name": None,
+            "metric_setting": self.metric_setting,
+        }
         for metric in self.metrics:
             if metric in self.avaliable_metrics:
-                self.metric_class[metric] = self.avaliable_metrics[metric](self.config)
+                self.metric_class[metric] = self.avaliable_metrics[metric](config)
             else:
                 print(f"{metric} has not been implemented!")
                 raise NotImplementedError
