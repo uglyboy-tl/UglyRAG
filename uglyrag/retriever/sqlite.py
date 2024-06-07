@@ -63,13 +63,15 @@ class SQLite(BaseDB, Retriever, Generic[T]):
 
     def search(self, query: str) -> List[str]:
         query_list = self.tokenizer(query)
+        logger.debug(f"搜索关键词: {query_list}")
         with self.Session() as db:
             stmt = (
                 select(self.dataType)
                 .select_from(self.dataType)
                 .join(DataIndex, self.dataType.id == DataIndex.rowid)
-                .where(DataIndex.data_index.match(f"{' '.join(query_list)}"))
-                .order_by(text(f"bm25({DataIndex.__tablename__})"))
+                .where(DataIndex.data_index.match(f"{' OR '.join(query_list)}"))
+                # .order_by(text(f"bm25({DataIndex.__tablename__})"))
+                .limit(self.topk)
             )
             results = db.scalars(stmt).all()
             return [str(result.content) for result in results]

@@ -5,6 +5,8 @@ from typing import List
 
 @dataclass
 class Retriever(ABC):
+    topk: int = 5
+
     @abstractmethod
     def index(self, docs: List[str]):
         pass
