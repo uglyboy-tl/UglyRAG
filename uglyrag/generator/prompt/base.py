@@ -2,17 +2,15 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 PROMPT_TEMPLATE = """
-Answer the question in the same language as the question, based on the provided documents. Provide only the answer, without any additional text.
+Answer the question based on the given document. Only give me the answer and do not output any other words.
 ======
-The following are provided documents:
-```text
+The following are given documents.
+
 {reference}
-```
+
 ======
 Question:
-```text
 {question}
-```
 """
 
 
