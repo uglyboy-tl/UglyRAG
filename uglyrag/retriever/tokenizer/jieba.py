@@ -14,5 +14,5 @@ class Jieba(BaseTokenizer):
     def __call__(self, text: str) -> List[str]:
         words = jieba.cut_for_search(text)
         if self.stopwords:
-            words = [w for w in words if w not in self.stopwords]
+            words = [w for w in words if w not in self.stopwords and w.strip()]
         return words
