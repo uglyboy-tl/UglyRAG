@@ -16,7 +16,7 @@ Question:
 
 @dataclass
 class BasePromptTemplate:
-    prompt_template = PROMPT_TEMPLATE
+    prompt_template: str = PROMPT_TEMPLATE
 
     def get_string(self, query: str, retrieval_results: Optional[List[str]] = None) -> str:
         if retrieval_results is None:
