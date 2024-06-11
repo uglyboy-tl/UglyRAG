@@ -1,7 +1,7 @@
 from .base import Retriever
-from .reranker import ReRanker
+from .reranker import Reranker
 
 __all__ = [
     "Retriever",
-    "ReRanker",
+    "Reranker",
 ]

@@ -4,7 +4,7 @@ from typing import List
 
 
 @dataclass
-class ReRanker(ABC):
+class Reranker(ABC):
     def __call__(self, query: str, contexts: List[str]) -> List[str]:
         all_scores = self.get_rerank_scores(query, contexts)
         assert len(all_scores) == len(contexts)

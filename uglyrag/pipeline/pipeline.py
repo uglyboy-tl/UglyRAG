@@ -5,8 +5,8 @@ from loguru import logger
 
 from uglyrag.generator import Generator, OpenAI_Generator
 from uglyrag.judger import Judger
-from uglyrag.refiner import ReFiner
-from uglyrag.retriever import ReRanker, Retriever
+from uglyrag.refiner import Refiner
+from uglyrag.retriever import Reranker, Retriever
 
 
 @dataclass
@@ -14,8 +14,8 @@ class BasicPipeline:
     retriever: Optional[Retriever] = None
     generator: Generator = field(default_factory=lambda: OpenAI_Generator())
     judger: Optional[Judger] = None
-    reranker: Optional[ReRanker] = None
-    refiner: Optional[ReFiner] = None
+    reranker: Optional[Reranker] = None
+    refiner: Optional[Refiner] = None
 
     def __post_init__(self):
         pass

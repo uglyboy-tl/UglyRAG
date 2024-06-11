@@ -1,3 +1,3 @@
-from .base import ReRanker
+from .base import Reranker
 
-__all__ = ["ReRanker"]
+__all__ = ["Reranker"]

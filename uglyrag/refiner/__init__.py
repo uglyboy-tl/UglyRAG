@@ -1,3 +1,3 @@
-from .base import ReFiner
+from .base import Refiner
 
-__all__ = ["ReFiner"]
+__all__ = ["Refiner"]
