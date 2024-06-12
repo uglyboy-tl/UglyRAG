@@ -26,7 +26,9 @@ class BasicPipeline:
         """
         if self.judger and not self.judger(query) or not self.retriever:
             logger.debug("无需检索或无法检索，将直接生成答案...")
-            return self.generator(query)
+            result = self.generator(query)
+            logger.success(f"{result}")
+            return result
 
         if docs:
             self.retriever.index(docs)
