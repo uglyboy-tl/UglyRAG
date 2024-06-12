@@ -26,7 +26,7 @@ class LLM_Judger(Judger):
 
     def __call__(self, query: str) -> Optional[str]:
         result = self.generator(query)
-        logger.debug(f"Judger result: {result}")
+        logger.trace(f"Judger result: {result}")
         if result.lower() == "yes":
             return None
         return [self.generator(query)]
