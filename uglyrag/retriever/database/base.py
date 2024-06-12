@@ -2,12 +2,20 @@ from abc import ABC
 from dataclasses import dataclass, field
 from typing import List, Type, TypeVar
 
-from sqlalchemy import Engine, MetaData, create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy import Engine, Integer, MetaData, Text, create_engine
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 
 class Base(DeclarativeBase):
-    indexed_cols = []
+    pass
+
+
+class Document(Base):
+    __tablename__ = "documents"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    indexed_content: Mapped[str] = mapped_column(Text)
+    original_content: Mapped[str] = mapped_column(Text)
+    indexed_cols = ["indexed_content"]
 
 
 T = TypeVar("T", bound=Base)

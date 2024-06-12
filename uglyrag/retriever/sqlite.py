@@ -11,7 +11,7 @@ from .base import Retriever
 from .database import Base, BaseDB, Document
 from .tokenizer import get_tokenizer
 
-T = TypeVar("T", bound=Base)
+T = TypeVar("T", bound=Document)
 
 
 @compiles(schema.CreateTable, "sqlite")
@@ -57,7 +57,7 @@ class SQLite(BaseDB, Retriever, Generic[T]):
 
     def _index(self, indexes: List[str], contents: List[str]):
         for index, content in zip(indexes, contents, strict=False):
-            self.add(self.dataType.get_instance(content, index))
+            self.add(self.dataType(original_content=content, indexed_content=index))
 
     def search(self, query: str) -> List[str]:
         query_list = self.tokenizer(query)
