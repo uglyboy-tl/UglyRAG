@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Generic, List, Type, TypeVar
 
 from loguru import logger
-from sqlalchemy import Integer, Text, event, schema, select, text
+from sqlalchemy import Integer, Text, event, schema, select
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.orm.session import Session
@@ -28,7 +28,7 @@ class DataIndex(Base):
     __tablename__ = "index_data_fts"
     __table_args__ = {"info": {"use_fts5": True}}
     rowid: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    data_index: Mapped[str] = mapped_column(Text)
+    indexed_content: Mapped[str] = mapped_column(Text)
 
 
 @dataclass
@@ -48,18 +48,16 @@ class SQLite(BaseDB, Retriever, Generic[T]):
                 continue
             body = getattr(data, col)
             data_segment.extend(cls.tokenizer(body))
-        data_index = " ".join(data_segment)
-        return data_index
+        indexed_content = " ".join(cls.tokenizer(data.indexed_content))
+        return indexed_content
 
     def _create_table(self, Table: T) -> None:
         super()._create_table(DataIndex)
         super()._create_table(Table)
 
-    def index(self, docs: List[str]):
-        logger.info("正在构建索引(SQLite FTS5)...")
-        for doc in docs:
-            self.add(self.dataType.get_instance(doc))
-        logger.success("索引构建完成")
+    def _index(self, indexes: List[str], contents: List[str]):
+        for index, content in zip(indexes, contents, strict=False):
+            self.add(self.dataType.get_instance(content, index))
 
     def search(self, query: str) -> List[str]:
         query_list = self.tokenizer(query)
@@ -69,18 +67,18 @@ class SQLite(BaseDB, Retriever, Generic[T]):
                 select(self.dataType)
                 .select_from(self.dataType)
                 .join(DataIndex, self.dataType.id == DataIndex.rowid)
-                .where(DataIndex.data_index.match(f"{' OR '.join(query_list)}"))
+                .where(DataIndex.indexed_content.match(f"{' OR '.join(query_list)}"))
                 # .order_by(text(f"bm25({DataIndex.__tablename__})"))
                 .limit(self.topk)
             )
             results = db.scalars(stmt).all()
-            return [str(result.content) for result in results]
+            return [str(result.original_content) for result in results]
 
 
 @event.listens_for(Session, "before_flush")
 def before_flush(session, flush_context, instances):
     for instance in session.new:
         if isinstance(instance, Base):
-            data_index = SQLite.transform_data(instance)
-            autoinsert = DataIndex(data_index=data_index)
+            indexed_content = SQLite.transform_data(instance)
+            autoinsert = DataIndex(indexed_content=indexed_content)
             session.add(autoinsert)

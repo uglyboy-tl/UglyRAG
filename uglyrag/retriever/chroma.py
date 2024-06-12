@@ -3,7 +3,6 @@ from typing import List
 
 import chromadb.utils.embedding_functions as embedding_functions
 from chromadb import Client, Collection, PersistentClient
-from loguru import logger
 
 from uglyrag import config
 
@@ -34,10 +33,11 @@ class Chroma(Retriever):
                 pass
         self.collection = self.client.get_or_create_collection(self.collection_name, embedding_function=openai_ef)
 
-    def index(self, docs: List[str]):
-        logger.info("正在构建索引(ChromaDB)...")
-        self.collection.add(documents=docs, ids=[f"id{i}" for i in range(len(docs))])
-        logger.success("索引构建完成")
+    def _index(self, indexes: List[str], contents: List[str]):
+        metadatas = []
+        for content in contents:
+            metadatas.append({"content": content})
+        self.collection.add(documents=indexes, metadatas=metadatas, ids=[f"id{i}" for i in range(len(indexes))])
 
     def search(self, query: str) -> List[str]:
         result = self.collection.query(
@@ -46,4 +46,4 @@ class Chroma(Retriever):
             # where={"metadata_field": "is_equal_to_this"}, # optional filter
             # where_document={"$contains":"search_string"}  # optional filter
         )
-        return result["documents"][0]
+        return [metadata["content"] for metadata in result["metadatas"][0]]
