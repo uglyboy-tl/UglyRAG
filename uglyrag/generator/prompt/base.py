@@ -20,5 +20,5 @@ class BasePromptTemplate:
 
     def get_string(self, query: str, retrieval_results: Optional[List[str]] = None) -> str:
         if retrieval_results is None:
-            return query
+            retrieval_results = []
         return self.prompt_template.format(question=query, reference="\n".join(retrieval_results))
