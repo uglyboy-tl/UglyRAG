@@ -13,6 +13,7 @@ class Config:
     openai_api_key: str = os.getenv("OPENAI_API_KEY")
     openai_api_base: str = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
     openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4o")
+    openai_embedding_api_key: str = os.getenv("OPENAI_EMBEDDING_API_KEY")
 
 
 config = Config()
