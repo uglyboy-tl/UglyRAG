@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List
+from typing import List, Tuple
 
 
 @dataclass
 class Reranker(ABC):
-    def __call__(self, query: str, contexts: List[str]) -> List[str]:
+    def __call__(self, query: str, contexts: List[str]) -> Tuple[List[str], List[float]]:
         all_scores = self.get_rerank_scores(query, contexts)
         assert len(all_scores) == len(contexts)
 

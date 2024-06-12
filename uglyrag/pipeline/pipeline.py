@@ -41,7 +41,7 @@ class BasicPipeline:
 
         if self.reranker:
             logger.info("正在重新排序...")
-            contexts = self.reranker(query, contexts)
+            contexts, scores = self.reranker(query, contexts)
 
         if self.refiner:
             logger.info("正在精简...")
