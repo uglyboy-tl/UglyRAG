@@ -39,10 +39,10 @@ class Chroma(Retriever):
             metadatas.append({"content": content})
         self.collection.add(documents=indexes, metadatas=metadatas, ids=[f"id{i}" for i in range(len(indexes))])
 
-    def search(self, query: str) -> List[str]:
+    def _search(self, query: str, n: int) -> List[str]:
         result = self.collection.query(
             query_texts=[query],
-            n_results=self.topk,
+            n_results=n,
             # where={"metadata_field": "is_equal_to_this"}, # optional filter
             # where_document={"$contains":"search_string"}  # optional filter
         )

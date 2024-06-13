@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Generic, List, Type, TypeVar
 
 from loguru import logger
-from sqlalchemy import Integer, Text, event, schema, select
+from sqlalchemy import Integer, Text, event, schema, select, text
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.orm.session import Session
@@ -59,7 +59,7 @@ class SQLite(BaseDB, Retriever, Generic[T]):
         for index, content in zip(indexes, contents, strict=False):
             self.add(self.dataType(original_content=content, indexed_content=index))
 
-    def search(self, query: str) -> List[str]:
+    def _search(self, query: str, n: int) -> List[str]:
         query_list = self.tokenizer(query)
         logger.debug(f"搜索关键词: {query_list}")
         with self.Session() as db:
@@ -68,8 +68,8 @@ class SQLite(BaseDB, Retriever, Generic[T]):
                 .select_from(self.dataType)
                 .join(DataIndex, self.dataType.id == DataIndex.rowid)
                 .where(DataIndex.indexed_content.match(f"{' OR '.join(query_list)}"))
-                # .order_by(text(f"bm25({DataIndex.__tablename__})"))
-                .limit(self.topk)
+                .order_by(text(f"bm25({DataIndex.__tablename__})"))
+                .limit(n)
             )
             results = db.scalars(stmt).all()
             return [str(result.original_content) for result in results]

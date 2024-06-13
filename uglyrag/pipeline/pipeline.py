@@ -6,7 +6,7 @@ from loguru import logger
 from uglyrag.generator import Generator, OpenAI_Generator
 from uglyrag.judger import Judger
 from uglyrag.refiner import Refiner
-from uglyrag.retriever import Reranker, Retriever
+from uglyrag.retriever import Retriever
 
 
 @dataclass
@@ -14,7 +14,6 @@ class BasicPipeline:
     retriever: Optional[Retriever] = None
     generator: Generator = field(default_factory=lambda: OpenAI_Generator())
     judger: Optional[Judger] = None
-    reranker: Optional[Reranker] = None
     refiner: Optional[Refiner] = None
 
     def __post_init__(self):
@@ -38,10 +37,6 @@ class BasicPipeline:
         logger.success(f"检索到 {len(contexts)} 条结果。")
         formatted_lines = "\n".join([f"{index + 1}. {line}" for index, line in enumerate(contexts)])
         logger.debug(f"检索结果如下:\n{formatted_lines}")
-
-        if self.reranker:
-            logger.info("正在重新排序...")
-            contexts, scores = self.reranker(query, contexts)
 
         if self.refiner:
             logger.info("正在精简...")
