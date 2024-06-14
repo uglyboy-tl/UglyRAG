@@ -1,3 +1,5 @@
+# modified from repo: https://github.com/percent4/embedding_rerank_retrieval
+
 import json
 from dataclasses import dataclass, field
 from typing import Dict, List

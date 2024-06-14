@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# modified from repo: https://github.com/percent4/embedding_rerank_retrieval
 # @place: Pudong, Shanghai
 # @file: rerank.py
 # @time: 2023/12/26 19:21
