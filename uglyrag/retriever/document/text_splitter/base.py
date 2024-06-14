@@ -14,13 +14,13 @@ class TextSplitter:
     length_function: callable = len_token
 
     def __post_init__(self) -> None:
-        if self.chunk_size <= 0:
-            raise ValueError("`chunk_size` must be a positive integer.")
-        if self.chunk_overlap >= self.chunk_size:
+        if self.chunk_overlap > self.chunk_size:
             raise ValueError("`chunk_overlap` must be less than `chunk_size`.")
 
     def split_text(self, text: str, split: Callable[str, List[str]] = SPLIT_FUNCTIONS[0]) -> List[str]:
         texts = []
+        if self.chunk_size <= 0:
+            return [text]
         parts: List[str] = split(text)
         part = ""
         i = 0
