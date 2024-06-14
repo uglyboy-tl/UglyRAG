@@ -1,5 +1,6 @@
 from .base import Judger
-from .llm_judger import LLM_Judger
+from .llm_judger import LLMJudger
+from .skr import SKRJudger
 
 
 def get_judger(name: str) -> Judger:

@@ -18,7 +18,7 @@ I will provide a question. Please determine if this question can be directly ans
 
 
 @dataclass
-class LLM_Judger(Judger):
+class LLMJudger(Judger):
     _name_ = "LLM"
     generator: Generator = field(init=False)
 
