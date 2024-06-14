@@ -10,10 +10,10 @@ from uglyrag import Pipeline
 
 
 @dataclass
-class Evaluation:
+class RAGEvaluation:
     index_path: str = "examples/indexes/sample_data.jsonl"
     test_dataset_path: str = "examples/dataset/test.jsonl"
-    output_dir: str = "data/evaluation"
+    output_dir: str = "data/rag_evaluation"
     dataset: Dataset = field(init=False)
     evaluator: Evaluator = field(init=False)
 

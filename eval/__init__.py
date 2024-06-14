@@ -1,3 +1,4 @@
-from .eval import Evaluation
+from .eval_rag import RAGEvaluation
+from .eval_retriever import RetrieverEvaluation
 
-__all__ = ["Evaluation"]
+__all__ = ["RAGEvaluation", "RetrieverEvaluation"]
