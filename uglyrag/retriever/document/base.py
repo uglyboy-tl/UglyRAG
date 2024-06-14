@@ -6,6 +6,7 @@ from typing import List
 @dataclass
 class BaseDocument(ABC):
     doc: str
+    _name_ = ""
 
     @property
     @abstractmethod

@@ -17,13 +17,14 @@ openai_ef = embedding_functions.OpenAIEmbeddingFunction(
 
 @dataclass
 class Chroma(Retriever):
+    _name_ = "Chroma"
     collection_name: str = "chroma"
     persistent_path: str = "data/chroma"
-    init_needed: bool = False
     client: Client = field(default_factory=Client)
     collection: Collection = field(init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
+        super().__post_init__()
         if self.persistent_path:
             self.client = PersistentClient(self.persistent_path)
         if self.init_needed:

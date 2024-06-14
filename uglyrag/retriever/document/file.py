@@ -12,6 +12,7 @@ from .text_splitter import text_splitter
 @dataclass
 class FileDocument(BaseDocument):
     path: Path = field(init=False)
+    _name_ = "File"
 
     def __post_init__(self):
         self.path = Path(self.doc)

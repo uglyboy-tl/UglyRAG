@@ -6,7 +6,9 @@ from .text_splitter import text_splitter
 
 
 @dataclass
-class SimpleDocument(BaseDocument):
+class DefaultDocument(BaseDocument):
+    _name_ = "Default"
+
     @property
     def indexed_contents(self) -> List[str]:
         return self.original_contents

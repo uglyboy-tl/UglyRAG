@@ -33,12 +33,17 @@ class DataIndex(Base):
 
 @dataclass
 class SQLite(BaseDB, Retriever, Generic[T]):
+    _name_ = "SQLite"
     db_url: str = "sqlite:///data/sqlite.db"
     dataType: Type[T] = Document
 
     # 类变量
     # BaseTokenizer 类型的分词器
     tokenizer = get_tokenizer()
+
+    def __post_init__(self) -> None:
+        Retriever.__post_init__(self)
+        BaseDB.__post_init__(self)
 
     @classmethod
     def transform_data(cls, data: T):
