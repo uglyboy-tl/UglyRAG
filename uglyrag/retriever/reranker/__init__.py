@@ -1,4 +1,5 @@
 from .base import BaseReranker
+from .bge import BGE_Reranker
 
 
 def get_reranker(name: str) -> BaseReranker:

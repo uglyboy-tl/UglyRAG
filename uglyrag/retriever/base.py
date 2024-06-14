@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 
 from loguru import logger
 
-from .document import get_document_class
+from .document import get_document
 from .query_rewrite import BaseQueryRewrite, get_query_rewrite
 from .reranker import BaseReranker, get_reranker
 
@@ -14,7 +14,7 @@ K = 4
 @dataclass
 class Retriever(ABC):
     _name_ = ""
-    topk: int = 5
+    top_n: int = 5
     config: Dict[str, str] = field(default_factory=dict)
     init_needed: bool = False
 
@@ -30,7 +30,7 @@ class Retriever(ABC):
         indexed_contents = []
         original_contents = []
         for doc in docs:
-            document = get_document_class(docs_type)(doc)
+            document = get_document(docs_type, doc)
             indexed_contents.extend(document.indexed_contents)
             original_contents.extend(document.original_contents)
         self._index(indexed_contents, original_contents)
@@ -40,14 +40,12 @@ class Retriever(ABC):
         if self.query_rewrite:
             logger.info("正在重写查询...")
             query = self.query_rewrite(query)
-        contexts = self._search(query, self.topk * K if self.reranker else self.topk)
+        contexts = self._search(query, self.top_n * K if self.reranker else self.top_n)
         if self.reranker:
             logger.info("正在重新排序...")
-            contexts, scores = self.reranker(query, contexts)
-            # 根据分数排序并取前topk个
-            contexts = [
-                contexts[i] for i in sorted(range(len(scores)), key=lambda k: scores[k], reverse=True)[: self.topk]
-            ]
+            results = self.reranker(query, contexts, self.top_n)
+            logger.trace(f"重新排序结果: {results}")
+            contexts = [passage for passage, score in results]
         return contexts
 
     @abstractmethod
