@@ -20,6 +20,10 @@ Given the question and the document, summarize the document.
 
 @dataclass
 class AbstractRefiner(Refiner):
+    """Implementation for Abstractive RECOMP compressor:
+    RECOMP: Improving Retrieval-Augmented LMs with Compression and Selective Augmentation.
+    """
+
     _name_ = "Abstract"
     generator: Generator = field(init=False)
 
