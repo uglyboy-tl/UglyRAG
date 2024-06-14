@@ -1,11 +1,11 @@
-from typing import Dict, Optional
+from typing import Type
 
 from .base import Retriever
 from .chroma import Chroma
 from .sqlite import SQLite
 
 
-def get_retriever(name: str) -> Retriever:
+def get_retriever_class(name: str) -> Type[Retriever]:
     # 获取所有当前模块中的类
     subclasses = Retriever.__subclasses__()
     for subclass in subclasses:
@@ -18,5 +18,5 @@ __all__ = [
     "Retriever",
     "Chroma",
     "SQLite",
-    "get_retriever",
+    "get_retriever_class",
 ]

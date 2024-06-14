@@ -6,17 +6,18 @@ from openai import OpenAI
 
 from uglyrag import config
 
-from .base import LLM
+from .base import LLM, Generator
 
 
 @dataclass
-class OpenAI_Generator(LLM):
+class OpenAI_Generator(LLM, Generator):
+    _name_ = "OpenAI"
     api_key: str = config.openai_api_key
     base_url: str = config.openai_api_base
     model: str = config.openai_model
 
     def __post_init__(self):
-        super().__post_init__()
+        LLM.__post_init__(self)
         if self.api_key is None:
             raise ValueError("OPENAI_API_KEY is not set")
 

@@ -7,6 +7,8 @@ from .prompt import PromptTemplate
 
 @dataclass
 class Generator(ABC):
+    _name_ = ""
+
     @abstractmethod
     def __call__(self, query: str, retrieval_results: Optional[List[str]] = None) -> str:
         pass

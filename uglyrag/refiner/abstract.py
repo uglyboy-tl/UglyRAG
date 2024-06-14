@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List
 
-from uglyrag.generator import Generator, OpenAI_Generator
+from uglyrag.generator import Generator, get_generator_class
 
 from .base import Refiner
 
@@ -20,10 +20,11 @@ Given the question and the document, summarize the document.
 
 @dataclass
 class AbstractRefiner(Refiner):
+    _name_ = "Abstract"
     generator: Generator = field(init=False)
 
     def __post_init__(self) -> None:
-        self.generator = OpenAI_Generator(PROMPT_TEMPLATE)
+        self.generator = get_generator_class("OpenAI")(PROMPT_TEMPLATE)
 
     def __call__(self, query: str, contexts: List[str]) -> List[str]:
         return [self.generator(query, contexts)]

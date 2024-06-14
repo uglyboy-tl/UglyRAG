@@ -3,7 +3,7 @@ from typing import Optional
 
 from loguru import logger
 
-from uglyrag.generator import Generator, OpenAI_Generator
+from uglyrag.generator import Generator, get_generator_class
 
 from .base import Judger
 
@@ -19,10 +19,11 @@ I will provide a question. Please determine if this question can be directly ans
 
 @dataclass
 class LLM_Judger(Judger):
+    _name_ = "LLM"
     generator: Generator = field(init=False)
 
     def __post_init__(self) -> None:
-        self.generator = OpenAI_Generator(PROMPT_TEMPLATE)
+        self.generator = get_generator_class("OpenAI")(PROMPT_TEMPLATE)
 
     def __call__(self, query: str) -> Optional[str]:
         result = self.generator(query)
