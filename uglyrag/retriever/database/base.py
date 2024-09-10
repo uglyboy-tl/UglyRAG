@@ -1,6 +1,5 @@
-from abc import ABC
 from dataclasses import dataclass, field
-from typing import List, Type, TypeVar
+from typing import Dict, List, Type, TypeVar
 
 from sqlalchemy import Engine, Integer, MetaData, Text, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
@@ -22,15 +21,17 @@ T = TypeVar("T", bound=Base)
 
 
 @dataclass
-class BaseDB(ABC):
-    db_url: str
+class BaseDB:
+    db_url: str = field(default="")
     init_needed: bool = False
+    config: Dict[str, str] = field(default_factory=dict)
     engine: Engine = field(init=False)
     metadata: MetaData = field(default_factory=lambda: MetaData())
     Session: Type = field(init=False)
     all_tables: List[str] = field(default_factory=lambda: [])
 
     def __post_init__(self):
+        self.db_url = self.config.get("db_url", self.db_url)
         self.engine = create_engine(self.db_url)
         # self.engine = create_engine(self.db_url, echo=True)  # debug
         self.metadata.reflect(self.engine)

@@ -14,16 +14,18 @@ K = 4
 @dataclass
 class Retriever(ABC):
     _name_ = ""
-    top_n: int = 5
     config: Dict[str, str] = field(default_factory=dict)
     init_needed: bool = False
 
+    top_n: int = field(init=False)
     query_rewrite: Optional[BaseQueryRewrite] = field(init=False)
     reranker: Optional[BaseReranker] = field(init=False)
 
     def __post_init__(self) -> None:
         self.query_rewrite = get_query_rewrite(self.config.get("query_rewrite", "Default"))
         self.reranker = get_reranker(self.config.get("reranker", "Default"))
+        self.init_needed = self.config.get("init_needed", self.init_needed)
+        self.top_n = int(self.config.get("top_n", 5))
 
     def index(self, docs: List[str], docs_type: str = "Default"):
         logger.info(f"正在构建索引({self.__class__.__name__})...")
