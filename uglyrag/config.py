@@ -1,5 +1,6 @@
 import configparser
 import threading
+from functools import wraps
 from pathlib import Path
 
 import appdirs
@@ -10,6 +11,7 @@ def singleton(cls):
     instances = {}
     lock = threading.Lock()  # 锁对象，保证线程安全
 
+    @wraps(cls)  # 保持原类的元数据
     def get_instance(*args, **kwargs):
         with lock:  # 保证线程同步
             if cls not in instances:
