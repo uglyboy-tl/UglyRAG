@@ -53,7 +53,7 @@ class Config:
         # 读取 INI 文件
         # 获取 XDG 配置目录
         config_dir = Path(appdirs.user_config_dir(app_name, roaming=True))
-        data_dir = Path(appdirs.user_data_dir(app_name, roaming=True))
+        data_dir = appdirs.user_data_dir(app_name, roaming=True)
         self.config_path = config_dir / "config.ini"
 
         try:
@@ -70,9 +70,9 @@ class Config:
         # 初始化配置文件是否发生变化的标志
         self._changed = False
 
-        self.data_dir = self.get("data_dir", section="core", default=str(data_dir))
+        self.data_dir = Path(self.get("data_dir", section="core", default=data_dir))
         # 创建数据目录
-        data_dir.mkdir(parents=True, exist_ok=True)
+        self.data_dir.mkdir(parents=True, exist_ok=True)
 
         # 配置日志输出到 data_dir 目录下的 log 文件
         self.configure_logging()
@@ -99,7 +99,7 @@ class Config:
 
     def configure_logging(self):
         # 创建 logs 文件夹
-        logs_dir = Path(self.data_dir) / "logs"
+        logs_dir = self.data_dir / "logs"
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         log_file = logs_dir / f"{datetime.now().strftime('%Y-%m-%d')}.log"
