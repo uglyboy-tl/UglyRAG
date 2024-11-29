@@ -5,68 +5,45 @@ import sqlite_vec
 
 from ._config import Config
 from ._embed import dims, embedding
+from ._singleton import singleton
 from ._tokenize import tokenize
 
 config = Config()
 
-def connect_to_database(db_path):
-    """
-    连接到数据库并返回连接对象。
-    :param db_path: 数据库文件路径
-    :return: SQLite 连接对象
-    """
-    try:
-        sqlite_conn = sqlite3.connect(db_path)
-        logging.info(f"已连接到数据库: {db_path}")
-        return sqlite_conn
-    except sqlite3.Error as e:
-        logging.error(f"连接数据库失败: {e}")
-        raise
 
-
-def load_extensions(sqlite_conn):
-    """
-    加载 SQLite 扩展。
-    :param sqlite_conn: SQLite 连接对象
-    """
-    try:
-        sqlite_conn.enable_load_extension(True)
-        sqlite_vec.load(sqlite_conn)
-        logging.info("SQLite 扩展 `sqlite_vec` 加载成功")
-    finally:
-        sqlite_conn.enable_load_extension(False)
-
-
-def initialize_database():
-    """
-    初始化数据库连接和扩展。
-    :return: SQLite 连接对象
-    """
-    db_filename = config.get("db_name", "core", "database.db")
-    db_path = config.data_dir / db_filename
-    sqlite_conn = connect_to_database(db_path)
-    load_extensions(sqlite_conn)
-    return sqlite_conn
-
-
-def get_database_versions(sqlite_conn):
-    """
-    获取 SQLite 和 vec 扩展的版本信息。
-    :return: SQLite 版本和 vec 扩展版本
-    """
-    try:
-        sqlite_version, vec_version = sqlite_conn.execute("SELECT sqlite_version(), vec_version()").fetchone()
-        logging.info(f"SQLite版本：{sqlite_version}, sqlite_vec 版本：{vec_version}")
-        return sqlite_version, vec_version
-    except sqlite3.Error as e:
-        logging.error(f"执行 SQL 失败: {e}")
-        raise
-
+@singleton
 class SQLiteStore:
     def __init__(self):
-        self.conn = initialize_database()
-        get_database_versions(self.conn)
+        db_filename = config.get("db_name", "core", "database.db")
+        db_path = config.data_dir / db_filename
+        try:
+            self.conn = sqlite3.connect(db_path)
+            logging.info(f"已连接到数据库: {db_path}")
+        except sqlite3.Error as e:
+            logging.error(f"连接数据库失败: {e}")
+            raise
+        try:
+            self.conn.enable_load_extension(True)
+            sqlite_vec.load(self.conn)
+            logging.info("SQLite 扩展 `sqlite_vec` 加载成功")
+        finally:
+            self.conn.enable_load_extension(False)
+
+        self._check_versions()
         self.cursor = self.conn.cursor()
+
+    def _check_versions(self):
+        """
+        获取 SQLite 和 vec 扩展的版本信息。
+        :return: SQLite 版本和 vec 扩展版本
+        """
+        try:
+            sqlite_version, vec_version = self.conn.execute("SELECT sqlite_version(), vec_version()").fetchone()
+            logging.info(f"SQLite版本：{sqlite_version}, sqlite_vec 版本：{vec_version}")
+            return sqlite_version, vec_version
+        except sqlite3.Error as e:
+            logging.error(f"执行 SQL 失败: {e}")
+            raise
 
     def _check_table(self, vault: str):
         pass
