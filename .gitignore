@@ -1,6 +1,6 @@
 # Project specific files
 /data/
-/src/*.py
+/*.py
 
 # IDE - specific files
 .vs/

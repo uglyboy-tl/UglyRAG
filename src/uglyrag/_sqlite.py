@@ -94,21 +94,5 @@ class SQLiteStore:
         # 提交更改
         self.conn.commit()
 
-    def search_keyword(self, query: str, vault="Core", top_n: int = 5):
-        self._check_table(vault)
-        self.cursor.execute(
-            f"SELECT {vault}.id, {vault}.content FROM {vault}_fts join {vault} on {vault}_fts.rowid={vault}.id WHERE {vault}_fts MATCH ? ORDER BY bm25({vault}_fts) LIMIT ?",
-            (" OR ".join(tokenize(query)), top_n),
-        )
-        return self.cursor.fetchall()
-
-    def search_vector(self, query: str, vault="Core", top_n: int = 5):
-        self._check_table(vault)
-        self.cursor.excute(
-            f"SELECT {vault}.id, {vault}.content FROM {vault}_vec join {vault} on {vault}_vec.rowid={vault}.id WHERE headline_embedding MATCH ? AND k = ? ORDER BY distance;",
-            (embedding(query), top_n),
-        )
-        return self.cursor.fetchall()
-
     def __del__(self):
         self.conn.close()
