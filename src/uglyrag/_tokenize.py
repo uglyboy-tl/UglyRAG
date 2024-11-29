@@ -5,26 +5,10 @@ from typing import List
 import jieba_fast
 import jieba_fast.posseg as pseg
 
-from ._stop_words import stop_words
+from data.stop_words import stop_words
 
 jieba_fast.setLogLevel(logging.INFO)
-allow_speech_tags = {
-    "an",
-    "i",
-    "j",
-    "l",
-    "n",
-    "nr",
-    "nrfg",
-    "ns",
-    "nt",
-    "nz",
-    "t",
-    "v",
-    "vd",
-    "vn",
-    "eng",
-}
+allow_speech_tags = {"an", "i", "j", "l", "n", "nr", "nrfg", "ns", "nt", "nz", "t", "v", "vd", "vn", "eng"}
 
 
 def tokenize(text: str) -> List[str]:
