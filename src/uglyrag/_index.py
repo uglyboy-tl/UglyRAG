@@ -6,7 +6,8 @@ store = SQLiteStore()
 
 
 def build(docs: list, vault: str = "Core"):
-    store.create_table(vault)
+    if not store.create_table(vault):
+        return
 
     for title, partition, content in docs:
         indexed_content = " ".join(tokenize(content) + tokenize(str(title)))

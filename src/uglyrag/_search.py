@@ -48,6 +48,9 @@ def reciprocal_rank_fusion(fts_results, vec_results) -> list[tuple[str, str]]:
 
 
 def hybrid_search(query: str, vault="Core", top_n: int = 5) -> list[tuple[str, str]]:
+    if not store.create_table(vault):
+        raise Exception("No such vault")
+
     fts_results = keyword_search(query, vault, top_n)
     vec_results = vector_search(query, vault, top_n)
     return reciprocal_rank_fusion(fts_results, vec_results)

@@ -44,8 +44,14 @@ class SQLiteStore:
             logging.error(f"执行 SQL 失败: {e}")
             raise
 
-    def _check_table(self, vault: str):
-        pass
+    def check_table(self, vault: str):
+        if vault.endswith("_fts") or vault.endswith("_vec"):
+            logging.warning(f"{vault} is a reserved name.")
+            return False
+        self.cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{vault}'")
+        if not bool(self.cursor.fetchone()):
+            self.create_table(vault)
+        return True
 
     def create_table(self, vault: str):
         # 创建表
