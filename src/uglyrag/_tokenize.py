@@ -1,10 +1,13 @@
+import logging
 import string
 from typing import List
 
+import jieba_fast
 import jieba_fast.posseg as pseg
 
 from ._stop_words import stop_words
 
+jieba_fast.setLogLevel(logging.INFO)
 allow_speech_tags = {
     "an",
     "i",
