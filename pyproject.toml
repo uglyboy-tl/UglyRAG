@@ -1,24 +1,21 @@
-[tool.poetry]
+[build-system] # https://python-poetry.org/docs/pyproject/#poetry-and-pep-517
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry] # https://python-poetry.org/docs/pyproject/
 name = "uglyrag"
 version = "0.1.0"
 description = ""
 authors = ["uglyboy <uglyboy@uglyboy.cn>"]
 readme = "README.md"
+repository = "https://github.com/uglyboy-tl/UglyRAG"
 
-[tool.poetry.dependencies]
+[tool.poetry.dependencies] # https://python-poetry.org/docs/dependency-specification/
 python = ">=3.11,<3.13"
 typer-slim = "^0.13.1"
 appdirs = "^1.4.4"
 sqlite-vec = "^0.1.6"
 jieba-fast = "^0.53"
-
-
-[tool.poetry.group.test.dependencies]
-pytest = "^8.2.1"
-ruff = "^0.4.5"
-
-[tool.poetry.scripts]
-uglyrag = "uglyrag.main:app"
 
 [[tool.poetry.source]]
 name = "my_mirror"
@@ -26,12 +23,17 @@ url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 default = false
 secondary = false
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[tool.poetry.group.test.dependencies] # https://python-poetry.org/docs/master/managing-dependencies/
+ruff = "^0.8.1"
+
+[tool.poetry.scripts] # https://python-poetry.org/docs/pyproject/#scripts
+uglyrag = "uglyrag:cli"
+
 
 [tool.ruff]
+fix = true
 line-length = 120 # YOLO
+src = ["src", "tests"]
 target-version = "py311"
 
 [tool.ruff.lint]
@@ -48,3 +50,6 @@ ignore = [
     "E501", # line too long, handled by black
     "C901", # too complex
 ]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"

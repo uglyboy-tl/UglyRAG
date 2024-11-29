@@ -37,13 +37,3 @@ def tokenize(text: str) -> List[str]:
     words = [word.lower() for word in words]
 
     return words
-
-
-def or_words(query):
-    words = tokenize(query)
-    result = " OR ".join(words)
-    return result
-
-
-def embedding(text: str) -> List[float]:
-    pass
