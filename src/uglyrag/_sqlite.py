@@ -4,9 +4,8 @@ import sqlite3
 import sqlite_vec
 
 from ._config import Config
-from ._embed import dims, embedding
+from ._embed import Embedder
 from ._singleton import singleton
-from ._tokenize import tokenize
 
 config = Config()
 
@@ -57,8 +56,16 @@ class SQLiteStore:
         # 创建全文搜索表
         self.cursor.execute(f"CREATE VIRTUAL TABLE IF NOT EXISTS {vault}_fts USING fts5(indexed_content);")
         # 创建向量搜索表
-        self.cursor.execute(f"CREATE VIRTUAL TABLE IF NOT EXISTS {vault}_vec USING vec0(embedding FLOAT[{str(dims)}]);")
+        self.cursor.execute(
+            f"CREATE VIRTUAL TABLE IF NOT EXISTS {vault}_vec USING vec0(embedding FLOAT[{str(Embedder.dims)}]);"
+        )
+        logging.debug(f"向量表维度为：{Embedder.dims}")
+        self.create_trigger(vault)
 
+        # 提交更改
+        self.conn.commit()
+
+    def create_trigger(self, vault: str):
         """
         # 创建触发器保持表同步
         self.cursor.execute(
@@ -78,18 +85,16 @@ class SQLiteStore:
             f"END;"
         )
         """
-
-        # 提交更改
-        self.conn.commit()
+        return
 
     # 批量插入数据
     def insert_row(self, data, vault="Core"):
-        logging.debug(f"正在插入数据到数据库: {data}")
+        doc, tokenized_content, embedding = data
+        logging.debug(f"正在插入数据到数据库: {doc}")
         self._check_table(vault)
-        self.cursor.execute(f"INSERT INTO {vault} (title, partition, content) VALUES (?,?,?)", data)
-        title, _, content = data
-        indexed_content = " ".join(tokenize(content) + tokenize(title))
-        self.cursor.execute(f"INSERT INTO {vault}_fts (indexed_content) VALUES (?)", (indexed_content,))
+        self.cursor.execute(f"INSERT INTO {vault} (title, partition, content) VALUES (?,?,?)", doc)
+        self.cursor.execute(f"INSERT INTO {vault}_fts (indexed_content) VALUES (?)", (tokenized_content,))
+        self.cursor.execute(f"INSERT INTO {vault}_vec (embedding) VALUES (?)", (embedding,))
 
         # 提交更改
         self.conn.commit()
