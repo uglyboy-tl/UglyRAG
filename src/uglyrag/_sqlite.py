@@ -3,9 +3,9 @@ import sqlite3
 
 import sqlite_vec
 
-from ._config import Config
-from ._embed import Embedder
-from ._singleton import singleton
+from uglyrag._config import Config
+from uglyrag._embed import Embedder
+from uglyrag._singleton import singleton
 
 config = Config()
 

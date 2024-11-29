@@ -5,7 +5,7 @@ from pathlib import Path
 
 import appdirs
 
-from ._singleton import singleton
+from uglyrag._singleton import singleton
 
 
 def configure_logger(logger, level_str):

@@ -1,7 +1,7 @@
-from ._config import Config
-from ._embed import Embedder
-from ._sqlite import SQLiteStore
-from ._tokenize import tokenize
+from uglyrag._config import Config
+from uglyrag._embed import Embedder
+from uglyrag._sqlite import SQLiteStore
+from uglyrag._tokenize import tokenize
 
 config = Config()
 store = SQLiteStore()

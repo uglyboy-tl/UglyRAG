@@ -2,7 +2,7 @@ import logging
 
 import typer
 
-from ._search import hybrid_search
+from uglyrag._search import hybrid_search
 
 cli = typer.Typer()
 
