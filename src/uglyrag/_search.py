@@ -1,5 +1,5 @@
 from ._config import Config
-from ._embed import embedding
+from ._embed import Embedder
 from ._sqlite import SQLiteStore
 from ._tokenize import tokenize
 
@@ -11,7 +11,7 @@ weight_vec = int(config.get("weight_vec", "RRF", 1))
 rrf_k = int(config.get("k", "RRF", 60))
 
 
-def keyword_search(query: str, vault="Core", top_n: int = 5) -> tuple[list[str], list[float]]:
+def keyword_search(query: str, vault="Core", top_n: int = 5) -> list[tuple[str, str]]:
     store.cursor.execute(
         f"SELECT {vault}.id, {vault}.content FROM {vault}_fts join {vault} on {vault}_fts.rowid={vault}.id WHERE {vault}_fts MATCH ? ORDER BY bm25({vault}_fts) LIMIT ?",
         (" OR ".join(tokenize(query)), top_n),
@@ -19,15 +19,15 @@ def keyword_search(query: str, vault="Core", top_n: int = 5) -> tuple[list[str],
     return store.cursor.fetchall()
 
 
-def vector_search(query: str, vault="Core", top_n: int = 5) -> tuple[list[str], list[float]]:
-    store.cursor.excute(
-        f"SELECT {vault}.id, {vault}.content FROM {vault}_vec join {vault} on {vault}_vec.rowid={vault}.id WHERE headline_embedding MATCH ? AND k = ? ORDER BY distance;",
-        (embedding(query), top_n),
+def vector_search(query: str, vault="Core", top_n: int = 5) -> list[tuple[str, str]]:
+    store.cursor.execute(
+        f"SELECT {vault}.id, {vault}.content FROM {vault}_vec join {vault} on {vault}_vec.rowid={vault}.id WHERE embedding MATCH ? AND k = ? ORDER BY distance;",
+        (Embedder.embedding(query), top_n),
     )
     return store.cursor.fetchall()
 
 
-def reciprocal_rank_fusion(fts_results, vec_results):
+def reciprocal_rank_fusion(fts_results, vec_results) -> list[tuple[str, str]]:
     rank_dict = {}
 
     # Process FTS results
@@ -47,18 +47,7 @@ def reciprocal_rank_fusion(fts_results, vec_results):
     return sorted_results
 
 
-'''
-def hybrid_search(query: str, *, num_results: int = 3, num_rerank: int = 100) -> tuple[list[str], list[float]]:
-    """Search chunks by combining ANN vector search with BM25 keyword search."""
-    # Run both searches.
-    vs_chunk_ids, _ = vector_search(query, num_results=num_rerank)
-    ks_chunk_ids, _ = keyword_search(query, num_results=num_rerank)
-    # Combine the results with Reciprocal Rank Fusion (RRF).
-    chunk_ids, hybrid_score = reciprocal_rank_fusion([vs_chunk_ids, ks_chunk_ids])
-    chunk_ids, hybrid_score = chunk_ids[:num_results], hybrid_score[:num_results]
-    return chunk_ids, hybrid_score
-'''
-
-
-def hybrid_search(query: str, vault="Core", top_n: int = 5):
-    return keyword_search(query, vault, top_n)
+def hybrid_search(query: str, vault="Core", top_n: int = 5) -> list[tuple[str, str]]:
+    fts_results = keyword_search(query, vault, top_n)
+    vec_results = vector_search(query, vault, top_n)
+    return reciprocal_rank_fusion(fts_results, vec_results)

@@ -16,6 +16,7 @@ typer-slim = "^0.13.1"
 appdirs = "^1.4.4"
 sqlite-vec = "^0.1.6"
 jieba-fast = "^0.53"
+fastembed = "^0.4.2"
 
 [[tool.poetry.source]]
 name = "my_mirror"
