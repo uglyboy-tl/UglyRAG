@@ -20,6 +20,12 @@ ruff = "^0.4.5"
 [tool.poetry.scripts]
 uglyrag = "uglyrag.main:app"
 
+[[tool.poetry.source]]
+name = "my_mirror"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = false
+secondary = false
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
