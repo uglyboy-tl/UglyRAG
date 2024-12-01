@@ -6,7 +6,7 @@ from fastembed import TextEmbedding
 class Embedder:
     """Embedder class for embedding text."""
 
-    model = TextEmbedding(model_name="BAAI/bge-small-zh-v1.5")
+    model = TextEmbedding(model_name="BAAI/bge-small-zh-v1.5", cache_dir="models")
     dims = len(next(model.query_embed("hello")))
 
     @classmethod
