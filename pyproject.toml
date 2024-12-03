@@ -24,12 +24,11 @@ url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 default = false
 secondary = false
 
-[tool.poetry.group.test.dependencies] # https://python-poetry.org/docs/master/managing-dependencies/
+[tool.poetry.group.dev.dependencies] # https://python-poetry.org/docs/master/managing-dependencies/
 ruff = "^0.8.1"
 
 [tool.poetry.scripts] # https://python-poetry.org/docs/pyproject/#scripts
 uglyrag = "uglyrag:cli"
-
 
 [tool.ruff]
 fix = true
