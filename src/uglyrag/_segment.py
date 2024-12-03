@@ -70,13 +70,13 @@ HORIZONTAL_RULE_PATTERN = f"(?:^(?:[-*_]){{{MIN_HORIZONTAL_RULE_LENGTH},}}\\s*$|
 HEADING_PATTERN = f"(?:^(?:[#*=-]{{1,{MAX_HEADING_LENGTH}}}\\s+|<h[1-6][^>]{{0,{MAX_HTML_HEADING_ATTRIBUTES_LENGTH}}}>)[^\\r\\n]{{1,{MAX_HEADING_CONTENT_LENGTH}}}(?:</h[1-6]>)?(?:\\r?\\n|$)|\\w[^\\r\\n]{{0,{MAX_HEADING_CONTENT_LENGTH}}}\\r?\\n[-=]{{2,{MAX_HEADING_UNDERLINE_LENGTH}}})"
 
 # New pattern for citations
-CITATION_PATTERN = f"(?:(?:\\[[0-9]+\\]|\\[\\^[0-9]+\\]:)(?:\\s+){get_sentence_pattern(MAX_BLOCKQUOTE_LINE_LENGTH)})"
+CITATION_PATTERN = f"(?:(?:\\[[0-9]+\\]|\\[\\^[0-9]+\\]:)\\s+{get_sentence_pattern(MAX_BLOCKQUOTE_LINE_LENGTH)})"
 
 # 2. Tables (Markdown, grid tables, and HTML tables, with length constraints)
 TABLE_PATTERN = f"(?:(?:^|\\r?\\n)(?:\\|[^\\r\\n]{{0,{MAX_TABLE_CELL_LENGTH}}}\\|(?:\\r?\\n(?:\\|[-:]{{1,{MAX_TABLE_CELL_LENGTH}}})*\\|){{0,1}}(?:\\r?\\n\\|[^\\r\\n]{{0,{MAX_TABLE_CELL_LENGTH}}}\\|){{0,{MAX_TABLE_ROWS}}}|<table>[\\s\\S]{{0,{MAX_HTML_TABLE_LENGTH}}}?</table>))"
 
 # 3. Block quotes (including nested quotes and citations, up to three levels, with length constraints)
-BLOCK_QUOTES_PATTERN = f"(?:^(?:>(?:>){{0,2}}(?:\\s+){get_sentence_pattern(MAX_BLOCKQUOTE_LINE_LENGTH)}\\r?\\n){{1,{MAX_BLOCKQUOTE_LINES}}})"
+BLOCK_QUOTES_PATTERN = f"(?:^(?:>(?:>){{0,2}}\\s+{get_sentence_pattern(MAX_BLOCKQUOTE_LINE_LENGTH)}\\r?\\n){{1,{MAX_BLOCKQUOTE_LINES}}})"
 
 # 4. List items (bulleted, numbered, lettered, or task lists, including nested, up to three levels, with length constraints)
 LIST_PATTERN = f"(?:(?:^|\\r?\\n)[ \\t]{{0,3}}(?:[-*+•]|\\d{{1,3}}\\.|\\w\\.|\\[[ xX]\\])[ \\t]+{get_sentence_pattern(MAX_LIST_ITEM_LENGTH)}\\r?\\n(?:(?:\\r?\\n[ \\t]{{2,5}}(?:[-*+•]|\\d{{1,3}}\\.|\\w\\.|\\[[ xX]\\])[ \\t]+{get_sentence_pattern(MAX_LIST_ITEM_LENGTH)}){{0,{MAX_NESTED_LIST_ITEMS}}}(?:\\r?\\n[ \\t]{{4,{MAX_LIST_INDENT_SPACES}}}(?:[-*+•]|\\d{{1,3}}\\.|\\w\\.|\\[[ xX]\\])[ \\t]+{get_sentence_pattern(MAX_LIST_ITEM_LENGTH)}){{0,{MAX_NESTED_LIST_ITEMS}}}))+"
@@ -86,11 +86,11 @@ LIST_PATTERN = f"(?:(?:^|\\r?\\n)[ \\t]{{0,3}}(?:[-*+•]|\\d{{1,3}}\\.|\\w\\.|\
 CODE_BLOCK_PATTERN = f"(?:^(?:|\\r?\\n)(?:```|~~~)(?:\\w{{0,{MAX_CODE_LANGUAGE_LENGTH}}})?\\r?\\n[\\s\\S]{{0,{MAX_CODE_BLOCK_LENGTH}}}?(?:```|~~~)\\r?\\n?|(?:(?:^|\\r?\\n)(?: {{4}}|\\t)[^\\r\\n]{{0,{MAX_LIST_ITEM_LENGTH}}}(?:\\r?\\n(?: {{4}}|\\t)[^\\r\\n]{{0,{MAX_LIST_ITEM_LENGTH}}}){{0,{MAX_INDENTED_CODE_LINES}}}\\r?\\n?)|(?:<pre>(?:<code>)?[\\s\\S]{{0,{MAX_CODE_BLOCK_LENGTH}}}?(?:</code>)?</pre>))"
 
 # 10. Standalone lines or phrases (including single-line blocks and HTML elements, with length constraints)
-STANDALONE_LINE_PATTERN = f"(?!{AVOID_AT_START})(?:^(?:<[a-zA-Z][^>]{{0,{MAX_HTML_TAG_ATTRIBUTES_LENGTH}}}>)(?:\\s+){get_sentence_pattern(MAX_STANDALONE_LINE_LENGTH)}(?:</[a-zA-Z]+>)?(?:\r?\n|$))"
+STANDALONE_LINE_PATTERN = f"(?!{AVOID_AT_START})(?:^(?:<[a-zA-Z][^>]{{0,{MAX_HTML_TAG_ATTRIBUTES_LENGTH}}}>)\\s*{get_sentence_pattern(MAX_STANDALONE_LINE_LENGTH)}(?:</[a-zA-Z]+>)?(?:\r?\n|$))"
 
 # 9. Paragraphs (with length constraints) 前有有换行的是段落，字数可以比较多。
 PARAGRAPH_PATTERN = (
-    f"(?:(?:^|\\r?\\n)(?:<p>)?(?:\\s*){get_sentence_pattern(MAX_PARAGRAPH_LENGTH)}(?:</p>)?(?=\\r?\\n|$))"
+    f"(?:(?:^|\\r?\\n)(?:<p>)?\\s*{get_sentence_pattern(MAX_PARAGRAPH_LENGTH)}(?:</p>)?(?=\\r?\\n|$))"
 )
 
 # 7. Sentences or phrases ending with punctuation (including ellipsis and Unicode punctuation) 非段落的句子，可能是格式不符合的一些内容，也可能是段落因为字数太多，导致无法识别。
