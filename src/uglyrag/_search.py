@@ -1,7 +1,7 @@
 from uglyrag._config import config
 from uglyrag._embed import Embedder
 from uglyrag._sqlite import store
-from uglyrag._tokenize import tokenize
+from uglyrag._utils import segment
 
 weight_fts = int(config.get("weight_fts", "RRF", 1))
 weight_vec = int(config.get("weight_vec", "RRF", 1))
@@ -11,7 +11,7 @@ rrf_k = int(config.get("k", "RRF", 60))
 def keyword_search(query: str, vault="Core", top_n: int = 5) -> list[tuple[str, str]]:
     store.cursor.execute(
         f"SELECT {vault}.id, {vault}.content FROM {vault}_fts join {vault} on {vault}_fts.rowid={vault}.id WHERE {vault}_fts MATCH ? ORDER BY bm25({vault}_fts) LIMIT ?",
-        (" OR ".join(tokenize(query)), top_n),
+        (" OR ".join(segment(query)), top_n),
     )
     return store.cursor.fetchall()
 

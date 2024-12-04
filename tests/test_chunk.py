@@ -2,7 +2,7 @@ import re
 
 import pytest
 
-from uglyrag._chunk import (
+from uglyrag._utils._chunk import (
     BLOCK_QUOTES_PATTERN,
     CITATION_PATTERN,
     CODE_BLOCK_PATTERN,

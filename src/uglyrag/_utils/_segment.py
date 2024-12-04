@@ -11,7 +11,7 @@ jieba_fast.setLogLevel(logging.INFO)
 allow_speech_tags = {"an", "i", "j", "l", "n", "nr", "nrfg", "ns", "nt", "nz", "t", "v", "vd", "vn", "eng"}
 
 
-def tokenize(text: str) -> List[str]:
+def segment(text: str) -> List[str]:
     # 结巴分词
     jieba_result = pseg.cut(text)
     # 词性筛选
