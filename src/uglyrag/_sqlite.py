@@ -95,9 +95,10 @@ class SQLiteStore:
 
     # 批量插入数据
     def insert_row(self, data, vault="Core"):
+        if not self.check_table(vault):
+            raise Exception("No such vault")
         doc, tokenized_content, embedding = data
         logging.debug(f"正在插入数据到数据库: {doc}")
-        self._check_table(vault)
         self.cursor.execute(f"INSERT INTO {vault} (title, partition, content) VALUES (?,?,?)", doc)
         self.cursor.execute(f"INSERT INTO {vault}_fts (indexed_content) VALUES (?)", (tokenized_content,))
         self.cursor.execute(f"INSERT INTO {vault}_vec (embedding) VALUES (?)", (embedding,))
