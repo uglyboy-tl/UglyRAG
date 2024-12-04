@@ -76,7 +76,9 @@ CITATION_PATTERN = f"(?:(?:\\[[0-9]+\\]|\\[\\^[0-9]+\\]:)\\s+{get_sentence_patte
 TABLE_PATTERN = f"(?:(?:^|\\r?\\n)(?:\\|[^\\r\\n]{{0,{MAX_TABLE_CELL_LENGTH}}}\\|(?:\\r?\\n(?:\\|[-:]{{1,{MAX_TABLE_CELL_LENGTH}}})*\\|){{0,1}}(?:\\r?\\n\\|[^\\r\\n]{{0,{MAX_TABLE_CELL_LENGTH}}}\\|){{0,{MAX_TABLE_ROWS}}}|<table>[\\s\\S]{{0,{MAX_HTML_TABLE_LENGTH}}}?</table>))"
 
 # 3. Block quotes (including nested quotes and citations, up to three levels, with length constraints)
-BLOCK_QUOTES_PATTERN = f"(?:^(?:>(?:>){{0,2}}\\s+{get_sentence_pattern(MAX_BLOCKQUOTE_LINE_LENGTH)}\\r?\\n){{1,{MAX_BLOCKQUOTE_LINES}}})"
+BLOCK_QUOTES_PATTERN = (
+    f"(?:^(?:>(?:>){{0,2}}\\s+{get_sentence_pattern(MAX_BLOCKQUOTE_LINE_LENGTH)}\\r?\\n){{1,{MAX_BLOCKQUOTE_LINES}}})"
+)
 
 # 4. List items (bulleted, numbered, lettered, or task lists, including nested, up to three levels, with length constraints)
 LIST_PATTERN = f"(?:(?:^|\\r?\\n)[ \\t]{{0,3}}(?:[-*+•]|\\d{{1,3}}\\.|\\w\\.|\\[[ xX]\\])[ \\t]+{get_sentence_pattern(MAX_LIST_ITEM_LENGTH)}\\r?\\n(?:(?:\\r?\\n[ \\t]{{2,5}}(?:[-*+•]|\\d{{1,3}}\\.|\\w\\.|\\[[ xX]\\])[ \\t]+{get_sentence_pattern(MAX_LIST_ITEM_LENGTH)}){{0,{MAX_NESTED_LIST_ITEMS}}}(?:\\r?\\n[ \\t]{{4,{MAX_LIST_INDENT_SPACES}}}(?:[-*+•]|\\d{{1,3}}\\.|\\w\\.|\\[[ xX]\\])[ \\t]+{get_sentence_pattern(MAX_LIST_ITEM_LENGTH)}){{0,{MAX_NESTED_LIST_ITEMS}}}))+"
@@ -89,9 +91,7 @@ CODE_BLOCK_PATTERN = f"(?:^(?:|\\r?\\n)(?:```|~~~)(?:\\w{{0,{MAX_CODE_LANGUAGE_L
 STANDALONE_LINE_PATTERN = f"(?!{AVOID_AT_START})(?:^(?:<[a-zA-Z][^>]{{0,{MAX_HTML_TAG_ATTRIBUTES_LENGTH}}}>)\\s*{get_sentence_pattern(MAX_STANDALONE_LINE_LENGTH)}(?:</[a-zA-Z]+>)?(?:\r?\n|$))"
 
 # 9. Paragraphs (with length constraints) 前有有换行的是段落，字数可以比较多。
-PARAGRAPH_PATTERN = (
-    f"(?:(?:^|\\r?\\n)(?:<p>)?\\s*{get_sentence_pattern(MAX_PARAGRAPH_LENGTH)}(?:</p>)?(?=\\r?\\n|$))"
-)
+PARAGRAPH_PATTERN = f"(?:(?:^|\\r?\\n)(?:<p>)?\\s*{get_sentence_pattern(MAX_PARAGRAPH_LENGTH)}(?:</p>)?(?=\\r?\\n|$))"
 
 # 7. Sentences or phrases ending with punctuation (including ellipsis and Unicode punctuation) 非段落的句子，可能是格式不符合的一些内容，也可能是段落因为字数太多，导致无法识别。
 SENTENCE_PATTERN = get_sentence_pattern(MAX_SENTENCE_LENGTH)
@@ -135,12 +135,3 @@ def split_text(text: str) -> list:
     # Apply the regex
     chunks = regex.findall(text)
     return [chunk.strip() for chunk in chunks if chunk.strip()]
-
-
-if __name__ == "__main__":
-    text = "  三月，攻開封，未拔。西與秦將楊熊會戰白馬，又戰曲遇東，大破之。楊熊走之滎"
-    # print(f"{LIST_PATTERN}")
-    test = f"(?!{AVOID_AT_START})(?:(?:^|\\r?\\n\\r?\\n)(?:\\s*)(?!{PUNCTUATION}\\s)(?:[^\\r\\n]{{1,100}}))"
-    regex = re.compile(PARAGRAPH_PATTERN, re.MULTILINE | re.DOTALL | re.UNICODE)
-    matches = regex.findall(text)
-    print(matches)
