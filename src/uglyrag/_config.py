@@ -166,3 +166,6 @@ class Config:
     def __del__(self):
         self.save()
         logging.debug(f"{self.__class__.__name__} 实例正在被删除，配置已保存。")
+
+
+config = Config()

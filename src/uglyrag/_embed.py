@@ -3,8 +3,9 @@ from typing import List
 from fastembed import TextEmbedding
 
 # from uglyrag._integrations import JinaAPI
+from uglyrag._config import config
 
-model = TextEmbedding(model_name="BAAI/bge-small-zh-v1.5", cache_dir="models")
+model = TextEmbedding(model_name="BAAI/bge-small-zh-v1.5", cache_dir=config.data_dir / "models")
 
 
 class Embedder:

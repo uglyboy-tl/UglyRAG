@@ -3,11 +3,9 @@ import sqlite3
 
 import sqlite_vec
 
-from uglyrag._config import Config
+from uglyrag._config import config
 from uglyrag._embed import Embedder
 from uglyrag._singleton import singleton
-
-config = Config()
 
 
 @singleton
@@ -108,3 +106,6 @@ class SQLiteStore:
 
     def __del__(self):
         self.conn.close()
+
+
+store = SQLiteStore()

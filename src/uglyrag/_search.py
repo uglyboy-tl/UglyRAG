@@ -1,10 +1,7 @@
-from uglyrag._config import Config
+from uglyrag._config import config
 from uglyrag._embed import Embedder
-from uglyrag._sqlite import SQLiteStore
+from uglyrag._sqlite import store
 from uglyrag._tokenize import tokenize
-
-config = Config()
-store = SQLiteStore()
 
 weight_fts = int(config.get("weight_fts", "RRF", 1))
 weight_vec = int(config.get("weight_vec", "RRF", 1))

@@ -1,10 +1,8 @@
 import logging
 
 from uglyrag._embed import Embedder
-from uglyrag._sqlite import SQLiteStore
+from uglyrag._sqlite import store
 from uglyrag._tokenize import tokenize
-
-store = SQLiteStore()
 
 
 def build(docs: list, vault: str = "Core"):
