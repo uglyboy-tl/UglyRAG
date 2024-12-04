@@ -54,7 +54,7 @@ class Config:
         # 初始化配置文件是否发生变化的标志
         self._changed = False
 
-        self.data_dir = Path(self.get("data_dir", section="core", default=data_dir))
+        self.data_dir = Path(self.get("data_dir", section="DEFAULT", default=data_dir))
         # 创建数据目录
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -87,7 +87,7 @@ class Config:
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         log_file = logs_dir / f"{datetime.now().strftime('%Y-%m-%d')}.log"
-        log_level = self.get("level", "logging", "info")
+        log_level = self.get("level", "LOGGING", "info")
 
         # 创建日志记录器
         logger = logging.getLogger()
@@ -115,19 +115,20 @@ class Config:
 
         logging.debug(f"日志文件已配置为: {log_file}")
 
-    def get(self, option, section="core", default=None):
+    def get(self, option, section="DEFAULT", default=None):
         try:
             value = self.config.get(section, option)
             logging.debug(f"从节 '{section}' 中获取选项 '{option}': {value}")
             return value
         except (configparser.NoSectionError, configparser.NoOptionError):
             if default is None:
+                logging.warning(f"节 '{section}' 中未找到选项 '{option}', 返回 None")
                 return None
             logging.warning(f"节 '{section}' 中未找到选项 '{option}'，使用默认值: {default}")
             self.set(option, default, section)
             return default
 
-    def set(self, option, value, section="core"):
+    def set(self, option, value, section="DEFAULT"):
         if not option:
             raise ValueError("节和选项不能为空或 None")
 

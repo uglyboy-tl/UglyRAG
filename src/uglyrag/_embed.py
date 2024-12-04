@@ -5,7 +5,8 @@ from fastembed import TextEmbedding
 # from uglyrag._integrations import JinaAPI
 from uglyrag._config import config
 
-model = TextEmbedding(model_name="BAAI/bge-small-zh-v1.5", cache_dir=config.data_dir / "models")
+model_name = config.get("embedding_model", "EMBEDDING", "BAAI/bge-small-zh-v1.5")
+model = TextEmbedding(model_name=model_name, cache_dir=config.data_dir / "models")
 
 
 class Embedder:

@@ -11,7 +11,7 @@ from uglyrag._singleton import singleton
 @singleton
 class SQLiteStore:
     def __init__(self):
-        db_filename = config.get("db_name", "core", "database.db")
+        db_filename = config.get("db_name", "DEFAULT", "database.db")
         db_path = config.data_dir / db_filename
         try:
             self.conn = sqlite3.connect(db_path)

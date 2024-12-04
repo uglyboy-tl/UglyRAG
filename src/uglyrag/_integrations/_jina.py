@@ -4,6 +4,8 @@ from uglyrag._config import Config
 
 config = Config()
 api_key = config.get("api_key", "JINA")
+if api_key is None:
+    raise ValueError("API 密钥未设置, 请修改 config.ini 文件，在 [JINA] 中设置 api_key=你的API密钥")
 
 data = {
     "model": "jina-embeddings-v3",
