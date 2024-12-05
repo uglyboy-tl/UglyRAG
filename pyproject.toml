@@ -20,7 +20,7 @@ fastembed = "^0.4.2"
 
 [[tool.poetry.source]]
 name = "my_mirror"
-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+url = "https://mirrors.huaweicloud.com/repository/pypi/simple"
 default = false
 secondary = false
 
