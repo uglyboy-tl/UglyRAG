@@ -1,9 +1,7 @@
 from typing import List, Tuple
 
 from uglyrag._config import config
-from uglyrag._embed import Embedder
 from uglyrag._sqlite import store
-from uglyrag._utils import segment
 
 weight_fts = int(config.get("weight_fts", "RRF", 1))
 weight_vec = int(config.get("weight_vec", "RRF", 1))
@@ -30,20 +28,12 @@ def reciprocal_rank_fusion(fts_results, vec_results) -> List[Tuple[str, str]]:
     return sorted_results
 
 
-def keyword_search(query: str, vault="Core", top_n: int = 5) -> List[Tuple[str, str]]:
-    return store.search_fts(segment(query), vault, top_n)
-
-
-def vector_search(query: str, vault="Core", top_n: int = 5) -> List[Tuple[str, str]]:
-    return store.search_vec(Embedder.embedding(query), vault, top_n)
-
-
 def hybrid_search(query: str, vault="Core", top_n: int = 5) -> List[Tuple[str, str]]:
     if not store.check_table(vault):
         raise Exception("No such vault")
 
-    fts_results = keyword_search(query, vault, top_n)
-    vec_results = vector_search(query, vault, top_n)
+    fts_results = store.search_fts(query, vault, top_n)
+    vec_results = store.search_vec(query, vault, top_n)
     result_dict = dict(combine([fts_results, vec_results]))
     score_result = reciprocal_rank_fusion(fts_results, vec_results)
     return [(i, result_dict[i]) for i in [i[0] for i in score_result]][:top_n]
@@ -59,11 +49,13 @@ def combine(results: List[List[Tuple[str, str]]]) -> List[Tuple[str, str]]:
 def rerank(query: str, results: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
     if not results:
         return []
-    # scores = [-score for score, item in enumerate(results)]
-    # sorted_results = sorted(zip(results, scores, strict=False), key=lambda x: x[1], reverse=True)
-    return results
+    # scores = Embedder.text_cross_enncoder(query, [i[1] for i in results])
+    scores = range(len(results), 0, -1)
+    sorted_results = sorted(zip(results, scores, strict=False), key=lambda x: x[1], reverse=True)
+    return [i[0] for i in sorted_results]
 
 
 def search(query: str, vault="Core", top_n: int = 5) -> List[Tuple[str, str]]:
-    results = hybrid_search(query, vault, top_n)
+    results = combine([hybrid_search(query, vault, top_n)])
+    # results = combine([store.search_fts(query, vault, top_n), store.search_vec(query, vault, top_n)])
     return rerank(query, results)[:top_n]

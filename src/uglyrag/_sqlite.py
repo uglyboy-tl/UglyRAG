@@ -4,8 +4,8 @@ import sqlite3
 import sqlite_vec
 
 from uglyrag._config import config
-from uglyrag._embed import Embedder
 from uglyrag._singleton import singleton
+from uglyrag._utils import dims, embedding, segment
 
 
 @singleton
@@ -61,60 +61,63 @@ class SQLiteStore:
         self.cursor.execute(f"CREATE VIRTUAL TABLE IF NOT EXISTS {vault}_fts USING fts5(indexed_content);")
         # 创建向量搜索表
         self.cursor.execute(
-            f"CREATE VIRTUAL TABLE IF NOT EXISTS {vault}_vec USING vec0(embedding FLOAT[{str(Embedder.dims)}]);"
+            f"CREATE VIRTUAL TABLE IF NOT EXISTS {vault}_vec USING vec0(embedding FLOAT[{str(dims)}]);"
         )
-        logging.debug(f"向量表维度为：{Embedder.dims}")
+        logging.debug(f"向量表维度为：{dims}")
         self.create_trigger(vault)
 
         # 提交更改
         self.conn.commit()
 
     def create_trigger(self, vault: str):
-        """
+        self.conn.create_function("segment", 1, lambda x: " ".join(segment(x)))
+        self.conn.create_function("embedding", 1, embedding)
         # 创建触发器保持表同步
         self.cursor.execute(
             f"CREATE TRIGGER IF NOT EXISTS {vault}_ai AFTER INSERT ON {vault} BEGIN "
-            f"INSERT INTO {vault}_fts(rowid, content, title) VALUES (new.id, new.content, new.title); "
+            f"INSERT INTO {vault}_fts(rowid, indexed_content) VALUES (new.id, segment(new.content));"
+            f"INSERT INTO {vault}_vec(rowid, embedding) VALUES (new.id, embedding(new.content));"
             f"END;"
         )
         self.cursor.execute(
             f"CREATE TRIGGER IF NOT EXISTS {vault}_ad AFTER DELETE ON {vault} BEGIN "
-            f"INSERT INTO {vault}_fts({vault}_fts,rowid, content, title) VALUES ('delete',old.id, old.content, old.title); "
+            f"DELETE FROM {vault}_fts WHERE rowid = old.id;"
+            f"DELETE FROM {vault}_vec WHERE rowid = old.id;"
             f"END;"
         )
         self.cursor.execute(
             f"CREATE TRIGGER IF NOT EXISTS {vault}_au AFTER UPDATE ON {vault} BEGIN "
-            f"INSERT INTO {vault}_fts({vault}_fts,rowid, content, title) VALUES ('delete',old.id, old.content, old.title); "
-            f"INSERT INTO {vault}_fts(rowid, content, title) VALUES (new.id, new.content, new.title); "
+            f"UPDATE {vault}_fts SET indexed_content = segment(new.content) WHERE rowid = new.id;"
+            f"UPDATE {vault}_vec SET embedding = embedding(new.content) WHERE rowid = new.id;"
             f"END;"
         )
-        """
-        return
 
     # 批量插入数据
-    def insert_row(self, data, vault="Core"):
+    def insert_row(self, doc, vault="Core"):
         if not self.check_table(vault):
             raise Exception("No such vault")
-        doc, tokenized_content, embedding = data
+        # title, partition, content = doc
+        # tokenized_content = " ".join(segment(content))
+        # embedding = Embedder.embedding(content)
         logging.debug(f"正在插入数据到数据库: {doc}")
         self.cursor.execute(f"INSERT INTO {vault} (title, partition, content) VALUES (?,?,?)", doc)
-        self.cursor.execute(f"INSERT INTO {vault}_fts (indexed_content) VALUES (?)", (tokenized_content,))
-        self.cursor.execute(f"INSERT INTO {vault}_vec (embedding) VALUES (?)", (embedding,))
+        # self.cursor.execute(f"INSERT INTO {vault}_fts (indexed_content) VALUES (?)", (tokenized_content,))
+        # self.cursor.execute(f"INSERT INTO {vault}_vec (embedding) VALUES (?)", (embedding,))
 
         # 提交更改
         self.conn.commit()
 
-    def search_fts(self, keyword: str, vault="Core", top_n: int = 5) -> list[tuple[str, str]]:
+    def search_fts(self, query: str, vault="Core", top_n: int = 5) -> list[tuple[str, str]]:
         self.cursor.execute(
             f"SELECT {vault}.id, {vault}.content FROM {vault}_fts join {vault} on {vault}_fts.rowid={vault}.id WHERE {vault}_fts MATCH ? ORDER BY bm25({vault}_fts) LIMIT ?",
-            (" OR ".join(keyword), top_n),
+            (" OR ".join(segment(query)), top_n),
         )
         return self.cursor.fetchall()
 
-    def search_vec(self, vector: str, vault="Core", top_n: int = 5) -> list[tuple[str, str]]:
+    def search_vec(self, query: str, vault="Core", top_n: int = 5) -> list[tuple[str, str]]:
         self.cursor.execute(
             f"SELECT {vault}.id, {vault}.content FROM {vault}_vec join {vault} on {vault}_vec.rowid={vault}.id WHERE embedding MATCH ? AND k = ? ORDER BY distance;",
-            (vector, top_n),
+            (embedding(query), top_n),
         )
         return self.cursor.fetchall()
 
