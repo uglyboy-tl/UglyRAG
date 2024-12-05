@@ -104,6 +104,20 @@ class SQLiteStore:
         # 提交更改
         self.conn.commit()
 
+    def search_fts(self, keyword: str, vault="Core", top_n: int = 5) -> list[tuple[str, str]]:
+        self.cursor.execute(
+            f"SELECT {vault}.id, {vault}.content FROM {vault}_fts join {vault} on {vault}_fts.rowid={vault}.id WHERE {vault}_fts MATCH ? ORDER BY bm25({vault}_fts) LIMIT ?",
+            (" OR ".join(keyword), top_n),
+        )
+        return self.cursor.fetchall()
+
+    def search_vec(self, vector: str, vault="Core", top_n: int = 5) -> list[tuple[str, str]]:
+        self.cursor.execute(
+            f"SELECT {vault}.id, {vault}.content FROM {vault}_vec join {vault} on {vault}_vec.rowid={vault}.id WHERE embedding MATCH ? AND k = ? ORDER BY distance;",
+            (vector, top_n),
+        )
+        return self.cursor.fetchall()
+
     def __del__(self):
         self.conn.close()
 
