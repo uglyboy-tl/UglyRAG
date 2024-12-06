@@ -1,18 +1,25 @@
 import logging
 import sqlite3
+from dataclasses import dataclass, field
+from sqlite3 import Connection, Cursor
+from typing import Callable, List, Tuple
 
 import sqlite_vec
 
 from uglyrag._config import config
-from uglyrag._singleton import singleton
-from uglyrag._utils import dims, embedding, segment
+
+db_filename = config.get("db_name", "DEFAULT", "database.db")
+db_path = config.data_dir / db_filename
 
 
-@singleton
+@dataclass
 class SQLiteStore:
-    def __init__(self):
-        db_filename = config.get("db_name", "DEFAULT", "database.db")
-        db_path = config.data_dir / db_filename
+    segment: Callable[[str], List[str]]
+    embedding: Callable[[str], List[float]]
+    conn: Connection = field(init=False)
+    cursor: Cursor = field(init=False)
+
+    def __post_init__(self):
         try:
             self.conn = sqlite3.connect(db_path)
             logging.info(f"已连接到数据库: {db_path}")
@@ -42,27 +49,30 @@ class SQLiteStore:
             logging.error(f"执行 SQL 失败: {e}")
             raise
 
-    def check_table(self, vault: str):
+    def check_table(self, vault: str) -> bool:
         if vault.endswith("_fts") or vault.endswith("_vec"):
-            logging.warning(f"{vault} is a reserved name.")
+            logging.warning(f"表名 {vault} 结尾为 _fts 或 _vec，将无法使用。")
             return False
-        self.cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{vault}'")
-        if not bool(self.cursor.fetchone()):
-            self.create_table(vault)
-        return True
+        try:
+            self.cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{vault}'")
+            if not bool(self.cursor.fetchone()):
+                self.create_table(vault)
+            return True
+        except sqlite3.Error as e:
+            logging.error(f"检查或创建表失败: {e}")
+            return False
 
     def create_table(self, vault: str):
         # 创建表
         # 创建数据表
         self.cursor.execute(
-            f"CREATE TABLE IF NOT EXISTS {vault} (id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, partition TEXT, title TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);"
+            f"CREATE TABLE IF NOT EXISTS {vault} (id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, chunk_index TEXT, path TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);"
         )
         # 创建全文搜索表
         self.cursor.execute(f"CREATE VIRTUAL TABLE IF NOT EXISTS {vault}_fts USING fts5(indexed_content);")
+        dims = len(self.embedding("Hello"))
         # 创建向量搜索表
-        self.cursor.execute(
-            f"CREATE VIRTUAL TABLE IF NOT EXISTS {vault}_vec USING vec0(embedding FLOAT[{str(dims)}]);"
-        )
+        self.cursor.execute(f"CREATE VIRTUAL TABLE IF NOT EXISTS {vault}_vec USING vec0(embedding FLOAT[{str(dims)}]);")
         logging.debug(f"向量表维度为：{dims}")
         self.create_trigger(vault)
 
@@ -70,8 +80,8 @@ class SQLiteStore:
         self.conn.commit()
 
     def create_trigger(self, vault: str):
-        self.conn.create_function("segment", 1, lambda x: " ".join(segment(x)))
-        self.conn.create_function("embedding", 1, embedding)
+        self.conn.create_function("segment", 1, lambda x: " ".join(self.segment(x)))
+        self.conn.create_function("embedding", 1, self.embedding)
         # 创建触发器保持表同步
         self.cursor.execute(
             f"CREATE TRIGGER IF NOT EXISTS {vault}_ai AFTER INSERT ON {vault} BEGIN "
@@ -92,37 +102,38 @@ class SQLiteStore:
             f"END;"
         )
 
-    # 批量插入数据
-    def insert_row(self, doc, vault="Core"):
+    # 插入数据
+    def insert_row(self, doc: str | Tuple[str], vault: str = "Core"):
         if not self.check_table(vault):
             raise Exception("No such vault")
-        # title, partition, content = doc
-        # tokenized_content = " ".join(segment(content))
-        # embedding = Embedder.embedding(content)
+
+        if not doc:
+            raise Exception("No content to insert")
+        elif isinstance(doc, str):
+            doc = (None, None, doc)
+        elif isinstance(doc, tuple) and len(doc) == 3:
+            pass
+        else:
+            raise Exception("Invalid document format")
         logging.debug(f"正在插入数据到数据库: {doc}")
-        self.cursor.execute(f"INSERT INTO {vault} (title, partition, content) VALUES (?,?,?)", doc)
-        # self.cursor.execute(f"INSERT INTO {vault}_fts (indexed_content) VALUES (?)", (tokenized_content,))
-        # self.cursor.execute(f"INSERT INTO {vault}_vec (embedding) VALUES (?)", (embedding,))
+        self.cursor.execute(f"INSERT INTO {vault} (path, chunk_index, content) VALUES (?,?,?)", doc)
 
         # 提交更改
         self.conn.commit()
 
-    def search_fts(self, query: str, vault="Core", top_n: int = 5) -> list[tuple[str, str]]:
+    def search_fts(self, query: str, vault="Core", top_n: int = 5) -> List[Tuple[str, str]]:
         self.cursor.execute(
             f"SELECT {vault}.id, {vault}.content FROM {vault}_fts join {vault} on {vault}_fts.rowid={vault}.id WHERE {vault}_fts MATCH ? ORDER BY bm25({vault}_fts) LIMIT ?",
-            (" OR ".join(segment(query)), top_n),
+            (" OR ".join(self.segment(query)), top_n),
         )
         return self.cursor.fetchall()
 
-    def search_vec(self, query: str, vault="Core", top_n: int = 5) -> list[tuple[str, str]]:
+    def search_vec(self, query: str, vault="Core", top_n: int = 5) -> List[Tuple[str, str]]:
         self.cursor.execute(
             f"SELECT {vault}.id, {vault}.content FROM {vault}_vec join {vault} on {vault}_vec.rowid={vault}.id WHERE embedding MATCH ? AND k = ? ORDER BY distance;",
-            (embedding(query), top_n),
+            (self.embedding(query), top_n),
         )
         return self.cursor.fetchall()
 
     def __del__(self):
         self.conn.close()
-
-
-store = SQLiteStore()
