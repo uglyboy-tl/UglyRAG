@@ -1,7 +1,7 @@
 from typing import List, Tuple
 
 from uglyrag._config import config
-from uglyrag._sqlite import store
+from uglyrag._index import Store
 
 weight_fts = int(config.get("weight_fts", "RRF", 1))
 weight_vec = int(config.get("weight_vec", "RRF", 1))
@@ -29,6 +29,7 @@ def reciprocal_rank_fusion(fts_results, vec_results) -> List[Tuple[str, str]]:
 
 
 def hybrid_search(query: str, vault="Core", top_n: int = 5) -> List[Tuple[str, str]]:
+    store = Store.get()
     if not store.check_table(vault):
         raise Exception("No such vault")
 

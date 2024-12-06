@@ -10,8 +10,6 @@ model = TextEmbedding(
     cache_dir=config.data_dir / "models",
 )
 
-dims = 512
-
 
 def embeddings(docs: List[str]) -> List[List[float]]:
     # return JinaAPI.embeddings(docs)
