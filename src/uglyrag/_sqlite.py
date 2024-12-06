@@ -5,6 +5,7 @@ from sqlite3 import Connection, Cursor
 from typing import Callable, List, Tuple
 
 import sqlite_vec
+from sqlite_vec import serialize_float32
 
 from uglyrag._config import config
 
@@ -81,7 +82,7 @@ class SQLiteStore:
 
     def create_trigger(self, vault: str):
         self.conn.create_function("segment", 1, lambda x: " ".join(self.segment(x)))
-        self.conn.create_function("embedding", 1, self.embedding)
+        self.conn.create_function("embedding", 1, lambda x: serialize_float32(self.embedding(x)))
         # 创建触发器保持表同步
         self.cursor.execute(
             f"CREATE TRIGGER IF NOT EXISTS {vault}_ai AFTER INSERT ON {vault} BEGIN "
@@ -131,7 +132,7 @@ class SQLiteStore:
     def search_vec(self, query: str, vault="Core", top_n: int = 5) -> List[Tuple[str, str]]:
         self.cursor.execute(
             f"SELECT {vault}.id, {vault}.content FROM {vault}_vec join {vault} on {vault}_vec.rowid={vault}.id WHERE embedding MATCH ? AND k = ? ORDER BY distance;",
-            (self.embedding(query), top_n),
+            (serialize_float32(self.embedding(query)), top_n),
         )
         return self.cursor.fetchall()
 
