@@ -22,14 +22,14 @@ class SQLiteStore:
     def __post_init__(self):
         try:
             self.conn = sqlite3.connect(db_path)
-            logging.info(f"已连接到数据库: {db_path}")
+            logging.debug(f"已连接到数据库: {db_path}")
         except sqlite3.Error as e:
             logging.error(f"连接数据库失败: {e}")
             raise
         try:
             self.conn.enable_load_extension(True)
             sqlite_vec.load(self.conn)
-            logging.info("SQLite 扩展 `sqlite_vec` 加载成功")
+            logging.debug("SQLite 扩展 `sqlite_vec` 加载成功")
         finally:
             self.conn.enable_load_extension(False)
 
@@ -43,7 +43,7 @@ class SQLiteStore:
         """
         try:
             sqlite_version, vec_version = self.conn.execute("SELECT sqlite_version(), vec_version()").fetchone()
-            logging.info(f"SQLite版本：{sqlite_version}, sqlite_vec 版本：{vec_version}")
+            logging.debug(f"SQLite版本：{sqlite_version}, sqlite_vec 版本：{vec_version}")
             return sqlite_version, vec_version
         except sqlite3.Error as e:
             logging.error(f"执行 SQL 失败: {e}")

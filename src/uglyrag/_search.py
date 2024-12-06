@@ -16,7 +16,7 @@ def combine(results: List[List[Tuple[str, str]]]) -> List[Tuple[str, str]]:
 class SearchEngine:
     segment: Callable[[str], List[str]] = lambda x: [x]
     embedding: Callable[[str], List[float]] = lambda _: [1]
-    rerank: Callable[[str, List[str]], List[float]] = lambda _, y: list(range(len(y), 0, -1))
+    rerank: Callable[[str, List[str]], List[float]] = None
     _instance = None
 
     _weight_fts: int = int(config.get("weight_fts", "RRF", 1))
@@ -35,7 +35,7 @@ class SearchEngine:
         if not store.check_table(vault):
             return
 
-        logging.info("Building index...")
+        logging.info("构建索引...")
         for title, partition, content in docs:
             store.insert_row((title, partition, content))
 
@@ -81,9 +81,10 @@ class SearchEngine:
 
     @classmethod
     def search(cls, query: str, vault="Core", top_n: int = 5) -> List[Tuple[str, str]]:
-        # 传统的混合搜索
-        results = combine([cls.hybrid_search(query, vault, top_n)])
-        # 如果 rerank 有用，则可以使用下面的代码
-        # store = cls.get()
-        # results = combine([store.search_fts(query, vault, top_n), store.search_vec(query, vault, top_n)])
-        return cls._rerank(query, results)[:top_n]
+        if cls.rerank is None:
+            logging.warning("使用混合搜索返回结果")
+            return combine([cls.hybrid_search(query, vault, top_n)])
+        else:
+            store = cls.get()
+            results = combine([store.search_fts(query, vault, top_n), store.search_vec(query, vault, top_n)])
+            return cls._rerank(query, results)[:top_n]

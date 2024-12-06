@@ -17,7 +17,7 @@ def singleton(cls):
     def get_instance(*args, **kwargs):
         with lock:  # 保证线程同步
             if cls not in instances:
-                logging.info(f"正在创建新的 {cls.__name__} 实例")
+                logging.debug(f"正在创建新的 {cls.__name__} 实例")
                 instances[cls] = cls(*args, **kwargs)
         return instances[cls]
 
@@ -59,7 +59,7 @@ class Config:
         try:
             # 读取配置文件
             self.config.read(self.config_path)
-            logging.info(f"配置文件读取成功: {self.config_path}")
+            logging.debug(f"配置文件读取成功: {self.config_path}")
         except FileNotFoundError:
             logging.warning(f"配置文件未找到: {self.config_path}")
         except configparser.Error as e:
@@ -138,9 +138,9 @@ class Config:
             return value
         except (configparser.NoSectionError, configparser.NoOptionError):
             if default is None:
-                logging.warning(f"节 '{section}' 中未找到选项 '{option}', 返回 None")
+                logging.debug(f"节 '{section}' 中未找到选项 '{option}', 返回 None")
                 return None
-            logging.warning(f"节 '{section}' 中未找到选项 '{option}'，使用默认值: {default}")
+            logging.debug(f"节 '{section}' 中未找到选项 '{option}'，使用默认值: {default}")
             self.set(option, default, section)
             return default
 
@@ -154,12 +154,12 @@ class Config:
 
         try:
             self.config.set(section, option, str(value))
-            logging.info(f"在节 '{section}' 中设置选项 '{option}' 为: {value}")
+            logging.debug(f"在节 '{section}' 中设置选项 '{option}' 为: {value}")
         except configparser.NoSectionError:
-            logging.info(f"添加节 '{section}'")
+            logging.debug(f"添加节 '{section}'")
             self.config.add_section(section)
             self.config.set(section, option, str(value))
-            logging.info(f"在节 '{section}' 中设置选项 '{option}' 为: {value}")
+            logging.debug(f"在节 '{section}' 中设置选项 '{option}' 为: {value}")
 
         self._changed = True  # 标记配置文件已更改
 
@@ -174,7 +174,7 @@ class Config:
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
         with self.config_path.open("w") as configfile:
             self.config.write(configfile)
-            logging.info(f"配置文件保存成功: {self.config_path}")
+            logging.debug(f"配置文件保存成功: {self.config_path}")
 
         # 重置更改标志
         self._changed = False
