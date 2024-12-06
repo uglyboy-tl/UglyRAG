@@ -12,11 +12,11 @@ repository = "https://github.com/uglyboy-tl/UglyRAG"
 
 [tool.poetry.dependencies] # https://python-poetry.org/docs/dependency-specification/
 python = ">=3.11,<3.13"
-typer-slim = "^0.13.1"
 appdirs = "^1.4.4"
 sqlite-vec = "^0.1.6"
 jieba-fast = {version="^0.53", extras = ["jieba"], optional=true}
 fastembed = {version="^0.4.2", extras = ["fastembed"], optional=true}
+requests = "^2.32.3"
 
 [tool.poetry.group.dev.dependencies] # https://python-poetry.org/docs/master/managing-dependencies/
 ruff = "^0.8.1"
@@ -30,10 +30,6 @@ name = "my_mirror"
 url = "https://mirrors.huaweicloud.com/repository/pypi/simple"
 default = false
 secondary = false
-
-
-[tool.poetry.scripts] # https://python-poetry.org/docs/pyproject/#scripts
-uglyrag = "uglyrag:cli"
 
 [tool.ruff]
 fix = true
