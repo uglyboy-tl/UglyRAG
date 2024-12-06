@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, List, Tuple
+from typing import Callable, Dict, List, Tuple
 
 from uglyrag._config import config
 from uglyrag._sqlite import SQLiteStore
@@ -15,13 +15,20 @@ def combine(results: List[List[Tuple[str, str]]]) -> List[Tuple[str, str]]:
 
 class SearchEngine:
     segment: Callable[[str], List[str]] = lambda x: [x]
-    embedding: Callable[[str], List[float]] = lambda _: [1]
+    embeddings: Callable[[List[str]], List[List[float]]] = lambda x: [[1] * len(x)]
     rerank: Callable[[str, List[str]], List[float]] = None
     _instance = None
+    _embeddings_dict: Dict[str, List[float]] = {}
 
     _weight_fts: int = int(config.get("weight_fts", "RRF", 1))
     _weight_vec: int = int(config.get("weight_vec", "RRF", 1))
     _rrf_k: int = int(config.get("k", "RRF", 60))
+
+    @classmethod
+    def embedding(cls, text: str) -> List[float]:
+        if text in cls._embeddings_dict:
+            return cls._embeddings_dict[text]
+        return cls.embeddings([text])[0]
 
     @staticmethod
     def get() -> SQLiteStore:
@@ -30,7 +37,15 @@ class SearchEngine:
         return SearchEngine._instance
 
     @classmethod
-    def build(cls, docs: list, vault: str = "Core"):
+    def build(cls, docs: List[Tuple[str, str, str]], vault: str = "Core"):
+        request_docs = [doc for _, _, doc in docs]
+        for text in docs:
+            if text in cls._embeddings_dict:
+                request_docs.pop(text)
+        embeddings = cls.embeddings(request_docs)
+        for doc, i in zip(request_docs, embeddings, strict=False):
+            cls._embeddings_dict[doc] = i
+
         store = cls.get()
         if not store.check_table(vault):
             return

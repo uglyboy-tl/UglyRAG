@@ -12,9 +12,9 @@ except ImportError as e:
     pass
 
 try:
-    from uglyrag._utils._embed import embedding
+    from uglyrag._utils._embed import embeddings
 
-    SearchEngine.embedding = embedding
+    SearchEngine.embeddings = embeddings
 except ImportError as e:
     logging.warning(e)
     logging.warning("无法为 SearchEngine 引入 embedding 模块")
