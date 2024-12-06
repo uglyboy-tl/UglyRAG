@@ -3,7 +3,6 @@ from typing import Callable, List, Tuple
 
 from uglyrag._config import config
 from uglyrag._sqlite import SQLiteStore
-from uglyrag._utils import embedding, segment
 
 
 # 合并搜索结果，搜索结果的结构是 List[(id, content)]
@@ -15,10 +14,10 @@ def combine(results: List[List[Tuple[str, str]]]) -> List[Tuple[str, str]]:
 
 
 class SearchEngine:
-    _instance = None
-    segment: Callable[[str], List[str]] = segment
-    embedding: Callable[[str], List[float]] = embedding
+    segment: Callable[[str], List[str]] = lambda x: [x]
+    embedding: Callable[[str], List[float]] = lambda _: [1]
     rerank: Callable[[str, List[str]], List[float]] = lambda _, y: list(range(len(y), 0, -1))
+    _instance = None
 
     _weight_fts: int = int(config.get("weight_fts", "RRF", 1))
     _weight_vec: int = int(config.get("weight_vec", "RRF", 1))

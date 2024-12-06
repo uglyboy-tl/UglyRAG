@@ -15,8 +15,15 @@ python = ">=3.11,<3.13"
 typer-slim = "^0.13.1"
 appdirs = "^1.4.4"
 sqlite-vec = "^0.1.6"
-jieba-fast = "^0.53"
-fastembed = "^0.4.2"
+jieba-fast = {version="^0.53", extras = ["jieba"], optional=true}
+fastembed = {version="^0.4.2", extras = ["fastembed"], optional=true}
+
+[tool.poetry.group.dev.dependencies] # https://python-poetry.org/docs/master/managing-dependencies/
+ruff = "^0.8.1"
+
+[tool.poetry.extras]
+jieba = ["jieba-fast"]
+fastembed = ["fastembed"]
 
 [[tool.poetry.source]]
 name = "my_mirror"
@@ -24,8 +31,6 @@ url = "https://mirrors.huaweicloud.com/repository/pypi/simple"
 default = false
 secondary = false
 
-[tool.poetry.group.dev.dependencies] # https://python-poetry.org/docs/master/managing-dependencies/
-ruff = "^0.8.1"
 
 [tool.poetry.scripts] # https://python-poetry.org/docs/pyproject/#scripts
 uglyrag = "uglyrag:cli"
