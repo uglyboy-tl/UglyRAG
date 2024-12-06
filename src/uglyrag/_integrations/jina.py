@@ -38,7 +38,11 @@ class JinaAPI:
         }
         data["input"] = texts
         res = cls._request("embeddings", data)
-        return [str(object["embedding"]) for object in res.json()["data"]]
+        return [object["embedding"] for object in res.json()["data"]]
+
+    @classmethod
+    def embedding(cls, text: str):
+        return cls.embeddings([text])[0]
 
     @classmethod
     def rerank(cls, query: str, documents: list, top_n: int):
