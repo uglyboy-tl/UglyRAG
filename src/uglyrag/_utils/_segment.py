@@ -1,14 +1,11 @@
-import logging
 from typing import Callable, List
 
 from uglyrag._config import config
 
 _segment_module = config.get("segment", "MODULES")
 segment: Callable[[str, List[str]], List[float]] = None
-if _segment_module == "JIEBA":
+if _segment_module == "Jieba":
     from uglyrag._integrations.jieba import segment
-
-    logging.debug(f"使用 segment 模块 {_segment_module}")
 elif _segment_module is None:
     raise ImportError("未配置 segment 模块")
 else:
