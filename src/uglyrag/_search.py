@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, Generator, List, Tuple
 
 from uglyrag._config import config
 from uglyrag._sqlite import SQLiteStore
@@ -17,7 +17,8 @@ class SearchEngine:
     segment: Callable[[str], List[str]] = lambda x: [x]
     embeddings: Callable[[List[str]], List[List[float]]] = lambda x: [[1] * len(x)]
     rerank: Callable[[str, List[str]], List[float]] = None
-    _instance = None
+    split: Callable[[str], List[Tuple[str, str]]] = lambda x: [("1", x)]
+    _db_instance = None
     _embeddings_dict: Dict[str, List[float]] = {}
 
     _weight_fts: int = int(config.get("weight_fts", "RRF", 1))
@@ -32,23 +33,39 @@ class SearchEngine:
 
     @staticmethod
     def get() -> SQLiteStore:
-        if SearchEngine._instance is None:
-            SearchEngine._instance = SQLiteStore(SearchEngine.segment, SearchEngine.embedding)
-        return SearchEngine._instance
+        if SearchEngine._db_instance is None:
+            SearchEngine._db_instance = SQLiteStore(SearchEngine.segment, SearchEngine.embedding)
+        return SearchEngine._db_instance
 
     @classmethod
-    def build(cls, docs: List[Tuple[str, str, str] | List[str]], vault: str = "Core"):
-        assert isinstance(docs, list)
+    def build(cls, docs: List[Tuple[str, str]], vault: str = "Core"):
+        if not docs:
+            return  # 如果 docs 为空，直接返回
+        datas: List[Tuple[str, str, str]] = []
+        for source, text in docs:
+            if not source or not text or cls._check_source(source, vault):
+                continue  # 跳过空字符串
+            try:
+                source_chunks: Generator[Tuple[str, str, str], None, None] = (
+                    (source, pard_id, content) for pard_id, content in cls.split(text)
+                )
+                datas.extend(source_chunks)
+            except Exception as e:
+                logging.error(f"Failed to split document: {e}")
+                continue  # 继续处理下一个文档
+        cls._add(datas, vault)
+
+    @classmethod
+    def _add(cls, datas: List[Tuple[str, str, str]], vault: str):
+        assert isinstance(datas, list)
         request_docs = []
-        for item in docs:
-            if isinstance(item, str):
-                text = item
-            elif isinstance(item, tuple) and len(item) == 3:
-                _, _, text = item
+        for data in datas:
+            if isinstance(data, tuple) and len(data) == 3:
+                _, _, content = data
             else:
                 raise Exception("Invalid document format")
-            if text not in cls._embeddings_dict:
-                request_docs.append(text)
+            if content not in cls._embeddings_dict:
+                request_docs.append(content)
         embeddings = cls.embeddings(request_docs)
         for doc, i in zip(request_docs, embeddings, strict=False):
             cls._embeddings_dict[doc] = i
@@ -58,14 +75,22 @@ class SearchEngine:
             return
 
         logging.info("构建索引...")
-        for item in docs:
-            if isinstance(item, str):
-                title, partition, content = None, None, item
-            elif isinstance(item, tuple) and len(item) == 3:
-                title, partition, content = item
+        for data in datas:
+            if isinstance(data, tuple) and len(data) == 3:
+                title, part_id, content = data
             else:
                 raise Exception("Invalid document format")
-            store.insert_row((title, partition, content))
+            store.insert_row((title, part_id, content))
+
+    @classmethod
+    def _check_source(cls, source: str, vault: str) -> bool:
+        return True
+
+    @classmethod
+    def rm_source(cls, source: str, vault: str):
+        if not cls._check_source(source, vault):
+            return
+        pass
 
     @classmethod
     def _reciprocal_rank_fusion(cls, fts_results, vec_results) -> List[Tuple[str, str]]:
@@ -88,7 +113,7 @@ class SearchEngine:
         return sorted_results
 
     @classmethod
-    def hybrid_search(cls, query: str, vault="Core", top_n: int = 5) -> List[Tuple[str, str]]:
+    def _hybrid_search(cls, query: str, vault: str, top_n: int = 5) -> List[Tuple[str, str]]:
         store = SearchEngine.get()
         if not store.check_table(vault):
             raise Exception("No such vault")
@@ -111,7 +136,7 @@ class SearchEngine:
     def search(cls, query: str, vault="Core", top_n: int = 5) -> List[Tuple[str, str]]:
         if cls.rerank is None:
             logging.warning("使用混合搜索返回结果")
-            return combine([cls.hybrid_search(query, vault, top_n)])
+            return combine([cls._hybrid_search(query, vault, top_n)])
         else:
             store = cls.get()
             results = combine([store.search_fts(query, vault, top_n), store.search_vec(query, vault, top_n)])

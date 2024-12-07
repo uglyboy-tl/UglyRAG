@@ -7,8 +7,8 @@ try:
 
     SearchEngine.segment = segment
 except ImportError as e:
-    logging.warning(e)
-    logging.warning("无法为 SearchEngine 引入分词模块")
+    logging.debug(e)
+    logging.warning("未引入分词模块，拉丁语系不受影响")
     pass
 
 try:
@@ -16,7 +16,7 @@ try:
 
     SearchEngine.embeddings = embeddings
 except ImportError as e:
-    logging.warning(e)
+    logging.debug(e)
     logging.warning("无法为 SearchEngine 引入 embedding 模块")
     pass
 
@@ -25,8 +25,17 @@ try:
 
     SearchEngine.rerank = rerank
 except ImportError as e:
-    logging.warning(e)
-    logging.warning("无法为 SearchEngine 引入 rerank 模块")
+    logging.debug(e)
+    logging.warning("未引入 rerank 模块，将使用混合搜索策略")
+    pass
+
+try:
+    from uglyrag._modules._split import split
+
+    SearchEngine.split = split
+except ImportError as e:
+    logging.debug(e)
+    logging.warning("未引入 split 模块，导入的文章不会被分割")
     pass
 
 __all__ = ["SearchEngine"]
