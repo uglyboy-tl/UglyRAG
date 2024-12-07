@@ -3,7 +3,7 @@ import logging
 from uglyrag._search import SearchEngine
 
 try:
-    from uglyrag._utils._segment import segment
+    from uglyrag._modules._segment import segment
 
     SearchEngine.segment = segment
 except ImportError as e:
@@ -12,7 +12,7 @@ except ImportError as e:
     pass
 
 try:
-    from uglyrag._utils._embed import embeddings
+    from uglyrag._modules._embed import embeddings
 
     SearchEngine.embeddings = embeddings
 except ImportError as e:
@@ -21,7 +21,7 @@ except ImportError as e:
     pass
 
 try:
-    from uglyrag._utils._rerank import rerank
+    from uglyrag._modules._rerank import rerank
 
     SearchEngine.rerank = rerank
 except ImportError as e:

@@ -20,6 +20,7 @@ requests = "^2.32.3"
 
 [tool.poetry.group.dev.dependencies] # https://python-poetry.org/docs/master/managing-dependencies/
 ruff = "^0.8.1"
+pytest = "^8.3.4"
 
 [tool.poetry.extras]
 jieba = ["jieba-fast"]

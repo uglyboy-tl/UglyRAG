@@ -9,7 +9,7 @@ if _rerank_module == "JINA":
 
     rerank = JinaAPI.rerank
 elif _rerank_module == "FastEmbed":
-    from uglyrag._integrations.fastembed import text_cross_enncoder as rerank
+    from uglyrag._integrations.fastembed import rerank
 elif _rerank_module is None:
     raise ImportError("未配置 rerank 模块")
 else:
