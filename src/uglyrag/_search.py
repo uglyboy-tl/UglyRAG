@@ -37,11 +37,18 @@ class SearchEngine:
         return SearchEngine._instance
 
     @classmethod
-    def build(cls, docs: List[Tuple[str, str, str]], vault: str = "Core"):
-        request_docs = [doc for _, _, doc in docs]
-        for text in docs:
-            if text in cls._embeddings_dict:
-                request_docs.pop(text)
+    def build(cls, docs: List[Tuple[str, str, str] | List[str]], vault: str = "Core"):
+        assert isinstance(docs, list)
+        request_docs = []
+        for item in docs:
+            if isinstance(item, str):
+                text = item
+            elif isinstance(item, tuple) and len(item) == 3:
+                _, _, text = item
+            else:
+                raise Exception("Invalid document format")
+            if text not in cls._embeddings_dict:
+                request_docs.append(text)
         embeddings = cls.embeddings(request_docs)
         for doc, i in zip(request_docs, embeddings, strict=False):
             cls._embeddings_dict[doc] = i
@@ -51,7 +58,13 @@ class SearchEngine:
             return
 
         logging.info("构建索引...")
-        for title, partition, content in docs:
+        for item in docs:
+            if isinstance(item, str):
+                title, partition, content = None, None, item
+            elif isinstance(item, tuple) and len(item) == 3:
+                title, partition, content = item
+            else:
+                raise Exception("Invalid document format")
             store.insert_row((title, partition, content))
 
     @classmethod

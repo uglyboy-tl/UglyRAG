@@ -127,6 +127,32 @@ class SQLiteStore:
             f"SELECT {vault}.id, {vault}.content FROM {vault}_fts join {vault} on {vault}_fts.rowid={vault}.id WHERE {vault}_fts MATCH ? ORDER BY bm25({vault}_fts) LIMIT ?",
             (" OR ".join(self.segment(query)), top_n),
         )
+        '''
+        # 如果希望对相同来源的文档召回的数量进行限制，可以用下面的方法，具体代码还需要进一步修改
+        self.cursor.execute(
+            f"""
+            SELECT id, content
+            FROM (
+                SELECT
+                    {vault}.id,
+                    {vault}.content,
+                    {vault}.path,
+                    ROW_NUMBER() OVER (PARTITION BY {vault}.path ORDER BY bm25({vault}_fts)) as rn_path,
+                    ROW_NUMBER() OVER (ORDER BY bm25({vault}_fts)) as rn_total
+                FROM
+                    {vault}_fts
+                JOIN
+                    {vault}
+                ON
+                    {vault}_fts.rowid = {vault}.id
+                WHERE
+                    {vault}_fts MATCH ?
+            ) subquery
+            WHERE rn_path <= ？ AND rn_total <= ?
+            """,
+            (" OR ".join(self.segment(query)), 5, top_n),
+        )
+        '''
         return self.cursor.fetchall()
 
     def search_vec(self, query: str, vault="Core", top_n: int = 5) -> List[Tuple[str, str]]:
