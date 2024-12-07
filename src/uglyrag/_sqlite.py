@@ -21,21 +21,59 @@ class SQLiteStore:
     cursor: Cursor = field(init=False)
 
     def __post_init__(self):
+        """
+        初始化数据库连接和配置。
+
+        此方法在类实例化后调用，用于初始化与SQLite数据库的连接，
+        并配置必要的数据库扩展和函数。
+        """
+        if not db_path.name.endswith(".db"):
+            raise ValueError("无效的数据库文件路径，必须以 .db 结尾")
+
         try:
+            # 连接到SQLite数据库
             self.conn = sqlite3.connect(db_path)
             logging.debug(f"已连接到数据库: {db_path}")
         except sqlite3.Error as e:
             logging.error(f"连接数据库失败: {e}")
             raise
-        try:
-            self.conn.enable_load_extension(True)
-            sqlite_vec.load(self.conn)
-            logging.debug("SQLite 扩展 `sqlite_vec` 加载成功")
-        finally:
-            self.conn.enable_load_extension(False)
 
+        try:
+            # 启用加载SQLite扩展
+            self.conn.enable_load_extension(True)
+            try:
+                sqlite_vec.load(self.conn)
+                logging.debug("SQLite 扩展 `sqlite_vec` 加载成功")
+            except Exception as e:
+                logging.error(f"加载 SQLite 扩展 `sqlite_vec` 失败: {e}")
+                raise
+        finally:
+            # 确保禁用扩展加载以保证安全性
+            self.conn.enable_load_extension(False)
+            logging.debug("已禁用 SQLite 扩展加载")
+
+        # 检查版本信息
         self._check_versions()
+        logging.debug("版本信息检查完成")
+
+        # 创建游标对象用于执行SQL命令
         self.cursor = self.conn.cursor()
+        logging.debug("游标对象创建成功")
+
+        # 重新注册函数
+        # 注册一个名为"segment"的SQL函数，用于文本分词
+        def segment_func(x):
+            return " ".join(self.segment(x))
+
+        self.conn.create_function("segment", 1, segment_func)
+        logging.debug("SQL函数 `segment` 注册成功")
+
+        # 注册一个名为"embedding"的SQL函数，用于生成文本的嵌入表示
+        def embedding_func(x):
+            return serialize_float32(self.embedding(x))
+
+        self.conn.create_function("embedding", 1, embedding_func)
+        logging.debug("SQL函数 `embedding` 注册成功")
 
     def _check_versions(self):
         """
@@ -57,17 +95,17 @@ class SQLiteStore:
         try:
             self.cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{vault}'")
             if not bool(self.cursor.fetchone()):
-                self.create_table(vault)
+                self._create_table(vault)
             return True
         except sqlite3.Error as e:
             logging.error(f"检查或创建表失败: {e}")
             return False
 
-    def create_table(self, vault: str):
+    def _create_table(self, vault: str):
         # 创建表
         # 创建数据表
         self.cursor.execute(
-            f"CREATE TABLE IF NOT EXISTS {vault} (id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, chunk_index TEXT, path TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);"
+            f"CREATE TABLE IF NOT EXISTS {vault} (id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, part_id TEXT, source TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);"
         )
         # 创建全文搜索表
         self.cursor.execute(f"CREATE VIRTUAL TABLE IF NOT EXISTS {vault}_fts USING fts5(indexed_content);")
@@ -75,14 +113,12 @@ class SQLiteStore:
         # 创建向量搜索表
         self.cursor.execute(f"CREATE VIRTUAL TABLE IF NOT EXISTS {vault}_vec USING vec0(embedding FLOAT[{str(dims)}]);")
         logging.debug(f"向量表维度为：{dims}")
-        self.create_trigger(vault)
+        self._create_trigger(vault)
 
         # 提交更改
         self.conn.commit()
 
-    def create_trigger(self, vault: str):
-        self.conn.create_function("segment", 1, lambda x: " ".join(self.segment(x)))
-        self.conn.create_function("embedding", 1, lambda x: serialize_float32(self.embedding(x)))
+    def _create_trigger(self, vault: str):
         # 创建触发器保持表同步
         self.cursor.execute(
             f"CREATE TRIGGER IF NOT EXISTS {vault}_ai AFTER INSERT ON {vault} BEGIN "
@@ -104,25 +140,21 @@ class SQLiteStore:
         )
 
     # 插入数据
-    def insert_row(self, doc: str | Tuple[str], vault: str = "Core"):
+    def insert_row(self, doc: Tuple[str], vault: str):
         if not self.check_table(vault):
             raise Exception("No such vault")
 
         if not doc:
             raise Exception("No content to insert")
-        elif isinstance(doc, str):
-            doc = (None, None, doc)
-        elif isinstance(doc, tuple) and len(doc) == 3:
-            pass
-        else:
+        elif not isinstance(doc, tuple) or len(doc) != 3:
             raise Exception("Invalid document format")
-        logging.debug(f"正在插入数据到数据库: {doc}")
-        self.cursor.execute(f"INSERT INTO {vault} (path, chunk_index, content) VALUES (?,?,?)", doc)
+        self.cursor.execute(f"INSERT INTO {vault} (source, part_id, content) VALUES (?,?,?)", doc)
+        logging.debug(f"已插入数据: {doc}")
 
         # 提交更改
         self.conn.commit()
 
-    def search_fts(self, query: str, vault="Core", top_n: int = 5) -> List[Tuple[str, str]]:
+    def search_fts(self, query: str, vault: str, top_n: int = 5) -> List[Tuple[str, str]]:
         self.cursor.execute(
             f"SELECT {vault}.id, {vault}.content FROM {vault}_fts join {vault} on {vault}_fts.rowid={vault}.id WHERE {vault}_fts MATCH ? ORDER BY bm25({vault}_fts) LIMIT ?",
             (" OR ".join(self.segment(query)), top_n),
@@ -136,8 +168,8 @@ class SQLiteStore:
                 SELECT
                     {vault}.id,
                     {vault}.content,
-                    {vault}.path,
-                    ROW_NUMBER() OVER (PARTITION BY {vault}.path ORDER BY bm25({vault}_fts)) as rn_path,
+                    {vault}.source,
+                    ROW_NUMBER() OVER (PARTITION BY {vault}.source ORDER BY bm25({vault}_fts)) as rn_source,
                     ROW_NUMBER() OVER (ORDER BY bm25({vault}_fts)) as rn_total
                 FROM
                     {vault}_fts
@@ -148,14 +180,14 @@ class SQLiteStore:
                 WHERE
                     {vault}_fts MATCH ?
             ) subquery
-            WHERE rn_path <= ？ AND rn_total <= ?
+            WHERE rn_source <= ？ AND rn_total <= ?
             """,
             (" OR ".join(self.segment(query)), 5, top_n),
         )
         '''
         return self.cursor.fetchall()
 
-    def search_vec(self, query: str, vault="Core", top_n: int = 5) -> List[Tuple[str, str]]:
+    def search_vec(self, query: str, vault: str, top_n: int = 5) -> List[Tuple[str, str]]:
         self.cursor.execute(
             f"SELECT {vault}.id, {vault}.content FROM {vault}_vec join {vault} on {vault}_vec.rowid={vault}.id WHERE embedding MATCH ? AND k = ? ORDER BY distance;",
             (serialize_float32(self.embedding(query)), top_n),
