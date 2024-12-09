@@ -21,7 +21,6 @@ fastembed = {version="^0.4.2", extras = ["fastembed"], optional=true}
 [tool.poetry.extras]
 jieba = ["jieba-fast"]
 fastembed = ["fastembed"]
-all = ["jieba", "fastembed"]
 
 [tool.poetry.group.dev.dependencies] # https://python-poetry.org/docs/master/managing-dependencies/
 ruff = "^0.8.1"
@@ -30,7 +29,7 @@ pytest = "^8.2.2"
 [tool.ruff]
 line-length = 120 # YOLO
 target-version = "py310"
-#src = ["src", "tests"]
+src = ["src", "tests"]
 fix = true
 
 [tool.ruff.lint]
@@ -61,6 +60,17 @@ unfixable = [
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401", "F403"]
 "tests/*" = ["B"]
+
+[tool.ruff.lint.isort]
+forced-separate = ["tests"]
+known-first-party = ["uglyrag"]
+required-imports = ["from __future__ import annotations"]
+
+[tool.ruff.format]
+quote-style = "double"  # Like Black, use double quotes for strings.
+indent-style = "space"  # Like Black, indent with spaces, rather than tabs.
+skip-magic-trailing-comma = false   # Like Black, respect magic trailing commas.
+line-ending = "auto"    # Like Black, automatically detect the appropriate line ending.
 
 [[tool.poetry.source]]
 name = "my_mirror"
