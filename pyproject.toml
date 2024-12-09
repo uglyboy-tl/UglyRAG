@@ -11,47 +11,59 @@ readme = "README.md"
 repository = "https://github.com/uglyboy-tl/UglyRAG"
 
 [tool.poetry.dependencies] # https://python-poetry.org/docs/dependency-specification/
-python = ">=3.11,<3.13"
+python = ">=3.10,<3.13"
 appdirs = "^1.4.4"
 sqlite-vec = "^0.1.6"
+requests = "^2.32.3"
 jieba-fast = {version="^0.53", extras = ["jieba"], optional=true}
 fastembed = {version="^0.4.2", extras = ["fastembed"], optional=true}
-requests = "^2.32.3"
-
-[tool.poetry.group.dev.dependencies] # https://python-poetry.org/docs/master/managing-dependencies/
-ruff = "^0.8.1"
-pytest = "^8.3.4"
 
 [tool.poetry.extras]
 jieba = ["jieba-fast"]
 fastembed = ["fastembed"]
+all = ["jieba", "fastembed"]
+
+[tool.poetry.group.dev.dependencies] # https://python-poetry.org/docs/master/managing-dependencies/
+ruff = "^0.8.1"
+pytest = "^8.2.2"
+
+[tool.ruff]
+line-length = 120 # YOLO
+target-version = "py310"
+#src = ["src", "tests"]
+fix = true
+
+[tool.ruff.lint]
+select = [
+    "F",    # pyflakes
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "B",    # flake8-bugbear
+    "I",    # isort
+    "N",    # pep8-naming
+    "PTH",  # flake8-pathlib
+    "UP",   # pyupgrade
+]
+
+ignore = [
+    "B905", # `zip()` without an explicit `strict=` parameter
+    "E402", # module level import not at top of file
+    "E501", # conflicts with black
+]
+
+unfixable = [
+    "F601",  # automatic fix might obscure issue
+    "F602",  # automatic fix might obscure issue
+    "B018",  # automatic fix might obscure issue
+    "UP036", # sometimes it's better to just noqa this
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401", "F403"]
+"tests/*" = ["B"]
 
 [[tool.poetry.source]]
 name = "my_mirror"
 url = "https://mirrors.huaweicloud.com/repository/pypi/simple"
 default = false
 secondary = false
-
-[tool.ruff]
-fix = true
-line-length = 120 # YOLO
-src = ["src", "tests"]
-target-version = "py311"
-
-[tool.ruff.lint]
-select = [
-    "E", # pycodestyle errors
-    "W", # pycodestyle warnings
-    "F", # pyflakes
-    "I", # isort
-    "C", # flake8-comprehensions
-    "B", # flake8-bugbear
-]
-
-ignore = [
-    "E501", # line too long, handled by black
-    "C901", # too complex
-]
-
-[tool.ruff.lint.flake8-tidy-imports]
-ban-relative-imports = "all"
