@@ -1,8 +1,8 @@
 import logging
 import sqlite3
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from sqlite3 import Connection, Cursor
-from typing import Callable, List, Tuple
 
 import sqlite_vec
 from sqlite_vec import serialize_float32
@@ -15,8 +15,8 @@ db_path = config.data_dir / db_filename
 
 @dataclass
 class SQLiteStore:
-    segment: Callable[[str], List[str]]
-    embedding: Callable[[str], List[float]]
+    segment: Callable[[str], list[str]]
+    embedding: Callable[[str], list[float]]
     conn: Connection = field(init=False)
     cursor: Cursor = field(init=False)
 
@@ -140,7 +140,7 @@ class SQLiteStore:
         )
 
     # 插入数据
-    def insert_row(self, doc: Tuple[str], vault: str):
+    def insert_row(self, doc: tuple[str], vault: str):
         if not self.check_table(vault):
             raise Exception("No such vault")
 
@@ -165,7 +165,7 @@ class SQLiteStore:
         self.cursor.execute(f"DELETE FROM {vault} WHERE source=?", (source,))
         self.conn.commit()
 
-    def search_fts(self, query: str, vault: str, top_n: int = 5) -> List[Tuple[str, str]]:
+    def search_fts(self, query: str, vault: str, top_n: int = 5) -> list[tuple[str, str]]:
         self.cursor.execute(
             f"SELECT {vault}.id, {vault}.content FROM {vault}_fts join {vault} on {vault}_fts.rowid={vault}.id WHERE {vault}_fts MATCH ? ORDER BY bm25({vault}_fts) LIMIT ?",
             (" OR ".join(self.segment(query)), top_n),
@@ -198,7 +198,7 @@ class SQLiteStore:
         '''
         return self.cursor.fetchall()
 
-    def search_vec(self, query: str, vault: str, top_n: int = 5) -> List[Tuple[str, str]]:
+    def search_vec(self, query: str, vault: str, top_n: int = 5) -> list[tuple[str, str]]:
         self.cursor.execute(
             f"SELECT {vault}.id, {vault}.content FROM {vault}_vec join {vault} on {vault}_vec.rowid={vault}.id WHERE embedding MATCH ? AND k = ? ORDER BY distance;",
             (serialize_float32(self.embedding(query)), top_n),

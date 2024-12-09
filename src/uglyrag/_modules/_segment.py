@@ -1,9 +1,9 @@
-from typing import Callable, List
+from collections.abc import Callable
 
 from uglyrag._config import config
 
 _segment_module = config.get("segment", "MODULES")
-segment: Callable[[str], List[str]] = None
+segment: Callable[[str], list[str]] = None
 if _segment_module == "Jieba":
     from uglyrag._integrations.jieba import segment
 elif _segment_module is None:

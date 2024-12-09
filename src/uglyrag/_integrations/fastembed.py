@@ -1,5 +1,3 @@
-from typing import List
-
 from fastembed import TextEmbedding
 from fastembed.rerank.cross_encoder import TextCrossEncoder
 
@@ -11,11 +9,11 @@ model = TextEmbedding(
 )
 
 
-def embeddings(docs: List[str]) -> List[List[float]]:
+def embeddings(docs: list[str]) -> list[list[float]]:
     return list(model.query_embed(docs))
 
 
-def embedding(doc: str) -> List[float]:
+def embedding(doc: str) -> list[float]:
     return embeddings([doc])[0]
 
 
@@ -29,7 +27,7 @@ else:
     reranker = None
 
 
-def rerank(query: str, documents: List[str]) -> List[float]:
+def rerank(query: str, documents: list[str]) -> list[float]:
     if reranker:
         return list(reranker.rerank(query, documents))
     else:

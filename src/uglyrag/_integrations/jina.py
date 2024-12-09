@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 import requests
 
@@ -37,7 +36,7 @@ class JinaAPI:
             return None
 
     @classmethod
-    def embeddings(cls, texts: List[str]) -> List[List[float]]:
+    def embeddings(cls, texts: list[str]) -> list[list[float]]:
         data = {
             "model": "jina-embeddings-v3",
             "task": "text-matching",
@@ -54,7 +53,7 @@ class JinaAPI:
         return cls.embeddings([text])[0]
 
     @classmethod
-    def rerank(cls, query: str, documents: List[str], top_n: int):
+    def rerank(cls, query: str, documents: list[str], top_n: int):
         data = {"model": "jina-reranker-v2-base-multilingual", "query": query, "docs": documents, "top_n": top_n}
         res = cls._request("rerank", data)
         return res["results"]

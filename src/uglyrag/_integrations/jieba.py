@@ -1,6 +1,5 @@
 import logging
 import string
-from typing import List
 
 import jieba_fast
 import jieba_fast.posseg as pseg
@@ -11,7 +10,7 @@ jieba_fast.setLogLevel(logging.INFO)
 allow_speech_tags = {"an", "i", "j", "l", "n", "nr", "nrfg", "ns", "nt", "nz", "t", "v", "vd", "vn", "eng"}
 
 
-def segment(text: str) -> List[str]:
+def segment(text: str) -> list[str]:
     # 结巴分词
     jieba_result = pseg.cut(text)
     # 词性筛选

@@ -6,7 +6,6 @@
 # COPYRIGHT: Jina AI
 
 import re
-from typing import List
 
 # Define variables for magic numbers
 MAX_HEADING_LENGTH = 6
@@ -132,7 +131,7 @@ FULL_PATTERN = f"({FRONTMATTER_PATTERN}|{HORIZONTAL_RULE_PATTERN}|{HEADING_PATTE
 regex = re.compile(FULL_PATTERN, re.DOTALL | re.MULTILINE | re.UNICODE)
 
 
-def split_text(text: str) -> List[str]:
+def split_text(text: str) -> list[str]:
     # Apply the regex
     chunks = regex.findall(text)
     return [chunk.strip() for chunk in chunks if chunk.strip()]
