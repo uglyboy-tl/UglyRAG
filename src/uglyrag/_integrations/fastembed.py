@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from fastembed import TextEmbedding
 from fastembed.rerank.cross_encoder import TextCrossEncoder
 

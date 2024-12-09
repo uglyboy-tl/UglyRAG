@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 
 from uglyrag._search import SearchEngine
