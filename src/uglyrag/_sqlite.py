@@ -154,6 +154,17 @@ class SQLiteStore:
         # 提交更改
         self.conn.commit()
 
+    def check_source(self, source: str, vault: str) -> bool:
+        if not self.check_table(vault):
+            return False
+        return self.cursor.execute(f"SELECT EXISTS(SELECT 1 FROM {vault} WHERE source=?)", (source,)).fetchone()[0] == 1
+
+    def rm_source(self, source: str, vault: str):
+        if not self.check_table(vault):
+            raise Exception("No such vault")
+        self.cursor.execute(f"DELETE FROM {vault} WHERE source=?", (source,))
+        self.conn.commit()
+
     def search_fts(self, query: str, vault: str, top_n: int = 5) -> List[Tuple[str, str]]:
         self.cursor.execute(
             f"SELECT {vault}.id, {vault}.content FROM {vault}_fts join {vault} on {vault}_fts.rowid={vault}.id WHERE {vault}_fts MATCH ? ORDER BY bm25({vault}_fts) LIMIT ?",
