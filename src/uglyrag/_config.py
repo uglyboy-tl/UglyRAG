@@ -133,7 +133,7 @@ class Config:
 
         logging.debug(f"日志文件已配置为: {log_file}")
 
-    def get(self, option, section="DEFAULT", default=None):
+    def get(self, option, section="DEFAULT", default: str = None):
         try:
             value = self.config.get(section, option)
             logging.debug(f"从节 '{section}' 中获取选项 '{option}': {value}")

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import logging
-import sqlite3
 from dataclasses import dataclass, field
-from sqlite3 import Connection, Cursor
+from sqlite3 import Connection, Cursor, Error, connect
 
 import sqlite_vec
 from sqlite_vec import serialize_float32
@@ -12,7 +11,7 @@ from uglyrag._config import config
 
 from ._db_impl import Database
 
-db_filename = config.get("db_name", "DEFAULT", "database.db")
+db_filename = config.get("db_name", default="database.db")
 db_path = config.data_dir / db_filename
 
 
@@ -32,15 +31,15 @@ class SQLiteStore(Database):
             raise ValueError("无效的数据库文件路径，必须以 .db 结尾")
 
         try:
-            # 连接到SQLite数据库
-            self.conn = sqlite3.connect(db_path)
+            # 连接到 SQLite 数据库
+            self.conn = connect(db_path)
             logging.debug(f"已连接到数据库: {db_path}")
-        except sqlite3.Error as e:
+        except Error as e:
             logging.error(f"连接数据库失败: {e}")
             raise
 
         try:
-            # 启用加载SQLite扩展
+            # 启用加载 SQLite 扩展
             self.conn.enable_load_extension(True)
             try:
                 sqlite_vec.load(self.conn)
@@ -57,7 +56,7 @@ class SQLiteStore(Database):
         self._check_versions()
         logging.debug("版本信息检查完成")
 
-        # 创建游标对象用于执行SQL命令
+        # 创建游标对象用于执行 SQL 命令
         self.cursor = self.conn.cursor()
         logging.debug("游标对象创建成功")
 
@@ -85,11 +84,11 @@ class SQLiteStore(Database):
             sqlite_version, vec_version = self.conn.execute("SELECT sqlite_version(), vec_version()").fetchone()
             logging.debug(f"SQLite版本：{sqlite_version}, sqlite_vec 版本：{vec_version}")
             return sqlite_version, vec_version
-        except sqlite3.Error as e:
+        except Error as e:
             logging.error(f"执行 SQL 失败: {e}")
             raise
 
-    def check_table(self, vault: str) -> bool:
+    def check_vault(self, vault: str) -> bool:
         if vault.endswith("_fts") or vault.endswith("_vec"):
             logging.warning(f"表名 {vault} 结尾为 _fts 或 _vec，将无法使用。")
             return False
@@ -98,7 +97,7 @@ class SQLiteStore(Database):
             if not bool(self.cursor.fetchone()):
                 self._create_table(vault)
             return True
-        except sqlite3.Error as e:
+        except Error as e:
             logging.error(f"检查或创建表失败: {e}")
             return False
 
@@ -141,27 +140,27 @@ class SQLiteStore(Database):
         )
 
     # 插入数据
-    def insert_row(self, doc: tuple[str], vault: str):
-        if not self.check_table(vault):
+    def insert_data(self, data: tuple[str], vault: str):
+        if not self.check_vault(vault):
             raise Exception("No such vault")
 
-        if not doc:
+        if not data:
             raise Exception("No content to insert")
-        elif not isinstance(doc, tuple) or len(doc) != 3:
+        elif not isinstance(data, tuple) or len(data) != 3:
             raise Exception("Invalid document format")
-        self.cursor.execute(f"INSERT INTO {vault} (source, part_id, content) VALUES (?,?,?)", doc)
-        logging.debug(f"已插入数据: {doc}")
+        self.cursor.execute(f"INSERT INTO {vault} (source, part_id, content) VALUES (?,?,?)", data)
+        logging.debug(f"已插入数据: {data}")
 
         # 提交更改
         self.conn.commit()
 
     def check_source(self, source: str, vault: str) -> bool:
-        if not self.check_table(vault):
+        if not self.check_vault(vault):
             return False
         return self.cursor.execute(f"SELECT EXISTS(SELECT 1 FROM {vault} WHERE source=?)", (source,)).fetchone()[0] == 1
 
     def rm_source(self, source: str, vault: str):
-        if not self.check_table(vault):
+        if not self.check_vault(vault):
             raise Exception("No such vault")
         self.cursor.execute(f"DELETE FROM {vault} WHERE source=?", (source,))
         self.conn.commit()

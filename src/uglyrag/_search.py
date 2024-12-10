@@ -80,7 +80,7 @@ class SearchEngine:
             cls._embeddings_dict[doc] = i
 
         store = cls.get()
-        if not store.check_table(vault):
+        if not store.check_vault(vault):
             return
 
         logging.info("构建索引...")
@@ -89,7 +89,7 @@ class SearchEngine:
                 source, part_id, content = data
             else:
                 raise Exception("Invalid document format")
-            store.insert_row((source, part_id, content), vault)
+            store.insert_data((source, part_id, content), vault)
 
     @classmethod
     def _check_source(cls, source: str, vault: str) -> bool:
@@ -124,7 +124,7 @@ class SearchEngine:
     @classmethod
     def _hybrid_search(cls, query: str, vault: str, top_n: int = 5) -> list[tuple[str, str]]:
         store = SearchEngine.get()
-        if not store.check_table(vault):
+        if not store.check_vault(vault):
             raise Exception("No such vault")
 
         fts_results = store.search_fts(query, vault, top_n)
