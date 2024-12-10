@@ -4,7 +4,7 @@ import logging
 from collections.abc import Callable, Generator
 
 from uglyrag._config import config
-from uglyrag._sqlite import SQLiteStore
+from uglyrag._database import Database, factory_db
 
 
 # 合并搜索结果，搜索结果的结构是 List[(id, content)]
@@ -21,7 +21,7 @@ class SearchEngine:
     rerank: Callable[[str, list[str]], list[float]] = None
     split: Callable[[str], list[tuple[str, str]]] = lambda x: [("1", x)]
     default_vault: str = "Core"
-    _db_instance = None
+    _db_instance: Database = None
     _embeddings_dict: dict[str, list[float]] = {}
 
     _weight_fts: int = int(config.get("weight_fts", "RRF", 1))
@@ -35,9 +35,9 @@ class SearchEngine:
         return cls.embeddings([text])[0]
 
     @staticmethod
-    def get() -> SQLiteStore:
+    def get() -> Database:
         if SearchEngine._db_instance is None:
-            SearchEngine._db_instance = SQLiteStore(SearchEngine.segment, SearchEngine.embedding)
+            SearchEngine._db_instance = factory_db(SearchEngine.segment, SearchEngine.embedding)
         return SearchEngine._db_instance
 
     @classmethod
@@ -147,7 +147,7 @@ class SearchEngine:
             vault = cls.default_vault
         if cls.rerank is None:
             logging.warning("使用混合搜索返回结果")
-            return combine([cls._hybrid_search(query, vault, top_n)])
+            return cls._hybrid_search(query, vault, top_n)
         else:
             store = cls.get()
             results = combine([store.search_fts(query, vault, top_n), store.search_vec(query, vault, top_n)])

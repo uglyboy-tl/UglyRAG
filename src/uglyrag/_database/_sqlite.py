@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from sqlite3 import Connection, Cursor
 
@@ -11,14 +10,14 @@ from sqlite_vec import serialize_float32
 
 from uglyrag._config import config
 
+from ._db_impl import Database
+
 db_filename = config.get("db_name", "DEFAULT", "database.db")
 db_path = config.data_dir / db_filename
 
 
 @dataclass
-class SQLiteStore:
-    segment: Callable[[str], list[str]]
-    embedding: Callable[[str], list[float]]
+class SQLiteStore(Database):
     conn: Connection = field(init=False)
     cursor: Cursor = field(init=False)
 
