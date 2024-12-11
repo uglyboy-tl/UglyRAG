@@ -5,7 +5,7 @@ from collections.abc import Callable
 from uglyrag._config import config
 
 _embedding_module = config.get("embedding", "MODULES", "JINA")
-embeddings: Callable[[str], list[float]] = None
+embeddings: Callable[[list[str]], list[list[float]]] | None = None
 if _embedding_module == "JINA":
     from uglyrag._integrations.jina import JinaAPI
 

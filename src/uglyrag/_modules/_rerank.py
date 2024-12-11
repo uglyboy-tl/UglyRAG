@@ -5,7 +5,7 @@ from collections.abc import Callable
 from uglyrag._config import config
 
 _rerank_module = config.get("rerank", "MODULES")
-rerank: Callable[[str, list[str]], list[float]] = None
+rerank: Callable[[str, list[str]], list[float]] | None = None
 if _rerank_module == "JINA":
     from uglyrag._integrations.jina import JinaAPI
 
