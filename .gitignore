@@ -1,5 +1,5 @@
 # Project specific files
-/models
+/examples
 /*.py
 
 # IDE - specific files
