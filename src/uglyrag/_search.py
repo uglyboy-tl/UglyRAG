@@ -19,14 +19,14 @@ def combine(results: list[list[tuple[str, str]]]) -> list[tuple[str, str]]:
 class SearchEngine:
     segment: Callable[[str], list[str]] = lambda x: [x]
     embeddings: Callable[[list[str]], list[list[float]]] = lambda x: [[1] * len(x)]
-    rerank: Callable[[str, list[str]], list[float]] = None
+    rerank: Callable[[str, list[str]], list[float]] | None = None
     split: Callable[[str], list[tuple[str, str]]] = lambda x: [("1", x)]
     default_vault: str = "Core"
     _embeddings_dict: dict[str, list[float]] = {}
 
-    _weight_fts: int = int(config.get("weight_fts", "RRF", 1))
-    _weight_vec: int = int(config.get("weight_vec", "RRF", 1))
-    _rrf_k: int = int(config.get("k", "RRF", 60))
+    _weight_fts: int = int(config.get("weight_fts", "RRF", 1))  # type: ignore
+    _weight_vec: int = int(config.get("weight_vec", "RRF", 1))  # type: ignore
+    _rrf_k: int = int(config.get("k", "RRF", 60))  # type: ignore
 
     @classmethod
     def embedding(cls, text: str) -> list[float]:
@@ -40,7 +40,7 @@ class SearchEngine:
         return factory_db(SearchEngine.segment, SearchEngine.embedding)
 
     @classmethod
-    def build(cls, docs: list[tuple[str, str]], vault: str = None, update_existing: bool = False):
+    def build(cls, docs: list[tuple[str, str]], vault: str | None = None, update_existing: bool = False):
         if not docs:
             return  # 如果 docs 为空，直接返回
         if vault is None:
@@ -90,12 +90,14 @@ class SearchEngine:
                 raise Exception("Invalid document format")
             store.insert_data((source, part_id, content), vault)
 
+        # store.rebuild_index(vault)
+
     @classmethod
     def _check_source(cls, source: str, vault: str) -> bool:
         return cls.get().check_source(source, vault)
 
     @classmethod
-    def rm_source(cls, source: str, vault: str = None):
+    def rm_source(cls, source: str, vault: str | None = None):
         if vault is None:
             vault = cls.default_vault
         cls.get().rm_source(source, vault)
@@ -122,11 +124,12 @@ class SearchEngine:
 
     @classmethod
     def _hybrid_search(cls, query: str, vault: str, top_n: int = 5) -> list[tuple[str, str]]:
-        store = SearchEngine.get()
+        store = cls.get()
         if not store.check_vault(vault):
             raise Exception("No such vault")
 
         fts_results = store.search_fts(query, vault, top_n)
+        print(fts_results)
         vec_results = store.search_vec(query, vault, top_n)
         result_dict = dict(combine([fts_results, vec_results]))
         score_result = cls._reciprocal_rank_fusion(fts_results, vec_results)
@@ -134,14 +137,14 @@ class SearchEngine:
 
     @classmethod
     def _rerank(cls, query: str, results: list[tuple[str, str]]) -> list[tuple[str, str]]:
-        if not results:
+        if not results or cls.rerank is None:
             return []
         scores = cls.rerank(query, [i[1] for i in results])
         sorted_results = sorted(zip(results, scores), key=lambda x: x[1], reverse=True)
         return [i[0] for i in sorted_results]
 
     @classmethod
-    def search(cls, query: str, vault: str = None, top_n: int = 5) -> list[tuple[str, str]]:
+    def search(cls, query: str, vault: str | None = None, top_n: int = 5) -> list[tuple[str, str]]:
         if vault is None:
             vault = cls.default_vault
         if cls.rerank is None:
@@ -149,5 +152,7 @@ class SearchEngine:
             return cls._hybrid_search(query, vault, top_n)
         else:
             store = cls.get()
+            if not store.check_vault(vault):
+                raise Exception("No such vault")
             results = combine([store.search_fts(query, vault, top_n), store.search_vec(query, vault, top_n)])
             return cls._rerank(query, results)[:top_n]

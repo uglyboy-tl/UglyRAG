@@ -15,18 +15,24 @@ class Database(ABC):
     embedding: Callable[[str], list[float]]
 
     @abstractmethod
-    def check_vault(self) -> bool:
+    def check_vault(self, vault: str) -> bool:
         """
         检查数据库是否存在，不存在则创建
         """
         pass
 
     @abstractmethod
-    def insert_data(self, data: tuple[str], vault: str):
+    def insert_data(self, data: tuple[str, str, str], vault: str):
         """
         插入数据
         """
         pass
+
+    def rebuild_index(self, vault: str):
+        """
+        重建全文搜索索引
+        """
+        return
 
     @abstractmethod
     def check_source(self, source: str, vault: str) -> bool:
@@ -53,7 +59,7 @@ class Database(ABC):
         pass
 
     @abstractmethod
-    def search_vec(self, query: list[float], vault: str, top_n: int = 5) -> list[tuple[str, float]]:
+    def search_vec(self, query: str, vault: str, top_n: int = 5) -> list[tuple[str, str]]:
         """
         使用向量搜索查询
         :param query: 查询词

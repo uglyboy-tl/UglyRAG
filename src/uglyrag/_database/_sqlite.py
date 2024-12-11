@@ -12,7 +12,7 @@ from uglyrag._config import config
 from ._db_impl import Database
 
 db_filename = config.get("db_name", default="database.db")
-db_path = config.data_dir / db_filename
+db_path = config.data_dir / db_filename  # type: ignore
 
 
 @dataclass
@@ -30,16 +30,16 @@ class SQLiteStore(Database):
         if not db_path.name.endswith(".db"):
             raise ValueError("无效的数据库文件路径，必须以 .db 结尾")
 
+        # 连接到 SQLite 数据库
         try:
-            # 连接到 SQLite 数据库
             self.conn = connect(db_path)
             logging.debug(f"已连接到数据库: {db_path}")
         except Error as e:
             logging.error(f"连接数据库失败: {e}")
             raise
 
+        # 启用加载 SQLite 扩展
         try:
-            # 启用加载 SQLite 扩展
             self.conn.enable_load_extension(True)
             try:
                 sqlite_vec.load(self.conn)
@@ -109,8 +109,8 @@ class SQLiteStore(Database):
         )
         # 创建全文搜索表
         self.cursor.execute(f"CREATE VIRTUAL TABLE IF NOT EXISTS {vault}_fts USING fts5(indexed_content);")
-        dims = len(self.embedding("Hello"))
         # 创建向量搜索表
+        dims = len(self.embedding("Hello"))
         self.cursor.execute(f"CREATE VIRTUAL TABLE IF NOT EXISTS {vault}_vec USING vec0(embedding FLOAT[{str(dims)}]);")
         logging.debug(f"向量表维度为：{dims}")
         self._create_trigger(vault)
@@ -140,7 +140,7 @@ class SQLiteStore(Database):
         )
 
     # 插入数据
-    def insert_data(self, data: tuple[str], vault: str):
+    def insert_data(self, data: tuple[str, str, str], vault: str):
         if not self.check_vault(vault):
             raise Exception("No such vault")
 
@@ -149,7 +149,7 @@ class SQLiteStore(Database):
         elif not isinstance(data, tuple) or len(data) != 3:
             raise Exception("Invalid document format")
         self.cursor.execute(f"INSERT INTO {vault} (source, part_id, content) VALUES (?,?,?)", data)
-        logging.debug(f"已插入数据: {data}")
+        logging.debug("已插入数据")
 
         # 提交更改
         self.conn.commit()
