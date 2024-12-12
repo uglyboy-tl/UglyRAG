@@ -35,7 +35,7 @@ class DuckDBStore(Database):
 
         # 安装和加载 DuckDB 扩展
         try:
-            """ # fts 扩展会被自动加载
+            """# fts 扩展会被自动加载
             self.con.install_extension("fts")
             self.con.load_extension("fts")
             logging.debug("DuckDB 扩展 `fts` 安装成功")
@@ -69,7 +69,6 @@ class DuckDBStore(Database):
             self.con.execute(f"SELECT * FROM information_schema.tables WHERE table_name='{vault}'")
             if not bool(self.con.fetchone()):
                 self._create_table(vault)
-            self.rebuild_index(vault)
             return True
         except Error as e:
             logging.error(f"检查或创建表失败: {e}")
@@ -86,8 +85,6 @@ class DuckDBStore(Database):
         self.con.execute("CREATE SEQUENCE seq_id START 1;")
         # 创建向量搜索索引
         self.con.execute(f"CREATE INDEX {vault}_vec_index ON {vault} USING HNSW (content_vec);")
-        # 重建索引
-        # self.rebuild_index(vault)
 
     def insert_data(self, data: tuple[str, str, str], vault: str) -> None:
         """
@@ -142,8 +139,8 @@ class DuckDBStore(Database):
         :param top_n: 返回结果数量
         """
         self.con.execute(
-            f"SELECT id, content FROM (SELECT *, fts_main_{vault}.match_bm25(content_fts, segment(?)) AS score FROM {vault}) WHERE score IS NOT NULL ORDER BY score DESC LIMIT ?",
-            (query, top_n),
+            f"SELECT id, content FROM (SELECT *, fts_main_{vault}.match_bm25(id, ?) AS score FROM {vault}) WHERE score IS NOT NULL ORDER BY score DESC LIMIT ?",
+            (" ".join(self.segment(query)), top_n),
         )
         return self.con.fetchall()
 

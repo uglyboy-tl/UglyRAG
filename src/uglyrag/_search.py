@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable, Generator
 from functools import cache
+from typing import Any
 
 from uglyrag._config import config
 from uglyrag._database import Database, factory_db
@@ -40,13 +41,14 @@ class SearchEngine:
         return factory_db(SearchEngine.segment, SearchEngine.embedding)
 
     @classmethod
-    def build(cls, docs: list[tuple[str, str]], vault: str | None = None, update_existing: bool = False) -> None:
+    def build(cls, docs: list[tuple[Any, str]], vault: str | None = None, update_existing: bool = False) -> None:
         if not docs:
             return  # 如果 docs 为空，直接返回
         if vault is None:
             vault = cls.default_vault
         data: list[tuple[str, str, str]] = []
         for source, text in docs:
+            source = str(source)
             if not source or not text:
                 continue  # 跳过空字符串
             if cls._check_source(source, vault):  # 检查是否已经存在
@@ -92,7 +94,7 @@ class SearchEngine:
                 raise Exception("Invalid document format")
             store.insert_data((source, part_id, content), vault)
 
-        # store.rebuild_index(vault)
+        store.rebuild_index(vault)
 
     @classmethod
     def _check_source(cls, source: str, vault: str) -> bool:
