@@ -57,11 +57,18 @@ class JinaAPI:
 
     @classmethod
     def rerank(cls, query: str, documents: list[str]) -> list[float]:
+        if not documents or not query:
+            return []
         data = {
             "model": "jina-reranker-v2-base-multilingual",
             "query": query,
-            "docs": documents,
+            "documents": documents,
             "top_n": len(documents),
         }
-        res = cls._request("rerank", data)
-        return res["results"]
+        res = cls._request("rerank", data)["results"]
+        result = [0.0] * len(documents)
+        for item in res:
+            index = item.get("index")
+            if index is not None and 0 <= index < len(documents):
+                result[index] = item["relevance_score"]
+        return result
