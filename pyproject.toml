@@ -4,16 +4,11 @@ requires = ["pdm-backend", "pdm-build-locked"]
 
 [dependency-groups]
 lint = [
-    "codespell>=2.3.0",
-    "mypy>=1.13.0",
     "ruff>=0.8.2",
     "toml-sort>=0.24.2",
 ]
 test = [
     "pytest>=8.3.4",
-]
-tox = [
-    "tox-pdm>=0.7.2",
 ]
 
 [project]

@@ -1,8 +1,18 @@
 ci:
   autoupdate_schedule: monthly
 repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.3.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+  - repo: https://github.com/pappasam/toml-sort
+    rev: v0.24.2
+    hooks:
+      - id: toml-sort-fix
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.8.1'
+    rev: v0.8.1
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix, --show-fixes]
@@ -10,13 +20,9 @@ repos:
   - repo: https://github.com/codespell-project/codespell
     rev: v2.3.0
     hooks:
-      - id: codespell  # See pyproject.toml for args
+      - id: codespell
         additional_dependencies:
           - tomli
-  - repo: https://github.com/pappasam/toml-sort
-    rev: v0.22.1
-    hooks:
-      - id: toml-sort
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.13.0
     hooks:
@@ -27,3 +33,7 @@ repos:
           - types-requests
           - types-certifi
           - pytest
+  - repo: https://github.com/pdm-project/pdm
+    rev: 2.22.0
+    hooks:
+      - id: pdm-lock-check
