@@ -3,6 +3,11 @@ build-backend = "pdm.backend"
 requires = ["pdm-backend", "pdm-build-locked"]
 
 [dependency-groups]
+doc = [
+    "mkdocs-git-revision-date-plugin>=0.3.2",
+    "mkdocs-material>=9.5.48",
+    "mkdocs>=1.6.1",
+]
 lint = [
     "ruff>=0.8.2",
     "toml-sort>=0.24.2",
@@ -63,7 +68,6 @@ source-includes = ["CHANGELOG.md", "LICENSE", "README.md", "tests"]
 [tool.pdm.scripts]
 lint = "pre-commit run --all-files"
 test = "pytest"
-tox = "tox"
 
 [tool.ruff]
 fix = true
@@ -104,6 +108,9 @@ unfixable = [
 forced-separate = ["tests"]
 known-first-party = ["uglyrag"]
 required-imports = ["from __future__ import annotations"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
 
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["F401", "F403"]

@@ -1,0 +1,39 @@
+site_name: UglyRAG
+
+repo_url: https://github.com/uglyboy-tl/uglyrag
+edit_uri: edit/main/docs
+
+theme:
+  name: material
+  language: 'zh'  # 配置语言
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.expand
+  icon:
+    repo: fontawesome/brands/github
+site_url: https://uglyboy-tl.github.io/UglyChain/
+
+nav:
+  - Usage:
+      - Introduction: index.md
+
+markdown_extensions:
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      linenums: true
+      anchor_linenums: true
+      auto_title: true
+      line_spans: __span
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tabbed:
+      alternate_style: true
+
+plugins:
+  - search
+  - git-revision-date
