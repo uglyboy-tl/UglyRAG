@@ -5,16 +5,17 @@ from collections.abc import Callable
 from uglyrag._config import config
 
 _split_module = config.get("split", "MODULES")
-split: Callable[[str], list[tuple[str, str]]] = None
+split: Callable[[str], list[tuple[str, str]]] | None = None
 
-if _split_module == "REGEX":
+if not _split_module:
+    raise ImportError("未配置 split 模块")
+elif _split_module == "REGEX":
     from uglyrag._integrations.regex_chunk import split_text
 
-    def split(text: str) -> list[tuple[str, str]]:
-        return [(str(i + 1), content) for i, content in enumerate(split_text(text))]
+    def split_func(x: str) -> list[tuple[str, str]]:
+        return [(str(i + 1), content) for i, content in enumerate(split_text(x))]
 
-elif _split_module is None:
-    raise ImportError("未配置 split 模块")
+    split = split_func
 else:
     raise ImportError(f"No such rerank module: {_split_module}")
 

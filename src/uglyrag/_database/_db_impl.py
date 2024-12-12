@@ -22,13 +22,13 @@ class Database(ABC):
         pass
 
     @abstractmethod
-    def insert_data(self, data: tuple[str, str, str], vault: str):
+    def insert_data(self, data: tuple[str, str, str], vault: str) -> None:
         """
         插入数据
         """
         pass
 
-    def rebuild_index(self, vault: str):
+    def rebuild_index(self, vault: str) -> None:
         """
         重建全文搜索索引
         """
@@ -42,7 +42,7 @@ class Database(ABC):
         pass
 
     @abstractmethod
-    def rm_source(self, source: str, vault: str):
+    def rm_source(self, source: str, vault: str) -> None:
         """
         删除特定来源的数据
         """

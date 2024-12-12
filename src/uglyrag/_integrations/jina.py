@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import requests
 
@@ -20,7 +21,7 @@ class JinaAPI:
     }
 
     @classmethod
-    def _request(cls, module: str, data: dict, full_url: str = None):
+    def _request(cls, module: str, data: dict[str, Any], full_url: str | None = None) -> Any:
         if not data:
             logging.warning("Data is empty, skipping request.")
             return None
@@ -51,11 +52,16 @@ class JinaAPI:
         return [object["embedding"] for object in res["data"]]
 
     @classmethod
-    def embedding(cls, text: str):
+    def embedding(cls, text: str) -> list[float]:
         return cls.embeddings([text])[0]
 
     @classmethod
-    def rerank(cls, query: str, documents: list[str], top_n: int):
-        data = {"model": "jina-reranker-v2-base-multilingual", "query": query, "docs": documents, "top_n": top_n}
+    def rerank(cls, query: str, documents: list[str]) -> list[float]:
+        data = {
+            "model": "jina-reranker-v2-base-multilingual",
+            "query": query,
+            "docs": documents,
+            "top_n": len(documents),
+        }
         res = cls._request("rerank", data)
         return res["results"]

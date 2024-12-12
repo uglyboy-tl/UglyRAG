@@ -37,7 +37,8 @@ except ImportError as e:
 try:
     from uglyrag._modules._split import split
 
-    SearchEngine.split = split
+    if split is not None:
+        SearchEngine.split = split
 except ImportError as e:
     logging.debug(e)
     logging.warning("未引入 split 模块，导入的文章不会被分割")

@@ -12,7 +12,7 @@ from uglyrag._config import config
 from ._db_impl import Database
 
 db_filename = config.get("db_name", default="database.db")
-db_path = config.data_dir / db_filename  # type: ignore
+db_path = config.data_dir / db_filename
 
 
 @dataclass
@@ -20,7 +20,7 @@ class SQLiteStore(Database):
     conn: Connection = field(init=False)
     cursor: Cursor = field(init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """
         初始化数据库连接和配置。
 
@@ -62,20 +62,20 @@ class SQLiteStore(Database):
 
         # 重新注册函数
         # 注册一个名为"segment"的SQL函数，用于文本分词
-        def segment_func(x):
+        def segment_func(x: str) -> str:
             return " ".join(self.segment(x))
 
         self.conn.create_function("segment", 1, segment_func)
         logging.debug("SQL函数 `segment` 注册成功")
 
         # 注册一个名为"embedding"的SQL函数，用于生成文本的嵌入表示
-        def embedding_func(x):
+        def embedding_func(x: str) -> bytes:
             return serialize_float32(self.embedding(x))
 
         self.conn.create_function("embedding", 1, embedding_func)
         logging.debug("SQL函数 `embedding` 注册成功")
 
-    def _check_versions(self):
+    def _check_versions(self) -> tuple[str, str]:
         """
         获取 SQLite 和 vec 扩展的版本信息。
         :return: SQLite 版本和 vec 扩展版本
@@ -101,7 +101,7 @@ class SQLiteStore(Database):
             logging.error(f"检查或创建表失败: {e}")
             return False
 
-    def _create_table(self, vault: str):
+    def _create_table(self, vault: str) -> None:
         # 创建表
         # 创建数据表
         self.cursor.execute(
@@ -118,7 +118,7 @@ class SQLiteStore(Database):
         # 提交更改
         self.conn.commit()
 
-    def _create_trigger(self, vault: str):
+    def _create_trigger(self, vault: str) -> None:
         # 创建触发器保持表同步
         self.cursor.execute(
             f"CREATE TRIGGER IF NOT EXISTS {vault}_ai AFTER INSERT ON {vault} BEGIN "
@@ -140,7 +140,7 @@ class SQLiteStore(Database):
         )
 
     # 插入数据
-    def insert_data(self, data: tuple[str, str, str], vault: str):
+    def insert_data(self, data: tuple[str, str, str], vault: str) -> None:
         if not self.check_vault(vault):
             raise Exception("No such vault")
 
@@ -159,7 +159,7 @@ class SQLiteStore(Database):
             return False
         return self.cursor.execute(f"SELECT EXISTS(SELECT 1 FROM {vault} WHERE source=?)", (source,)).fetchone()[0] == 1
 
-    def rm_source(self, source: str, vault: str):
+    def rm_source(self, source: str, vault: str) -> None:
         if not self.check_vault(vault):
             raise Exception("No such vault")
         self.cursor.execute(f"DELETE FROM {vault} WHERE source=?", (source,))
@@ -205,5 +205,5 @@ class SQLiteStore(Database):
         )
         return self.cursor.fetchall()
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.conn.close()

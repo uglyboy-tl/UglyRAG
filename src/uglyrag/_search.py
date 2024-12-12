@@ -24,9 +24,9 @@ class SearchEngine:
     default_vault: str = "Core"
     _embeddings_dict: dict[str, list[float]] = {}
 
-    _weight_fts: int = int(config.get("weight_fts", "RRF", 1))  # type: ignore
-    _weight_vec: int = int(config.get("weight_vec", "RRF", 1))  # type: ignore
-    _rrf_k: int = int(config.get("k", "RRF", 60))  # type: ignore
+    _weight_fts: float = float(config.get("weight_fts", "RRF", "1.0"))
+    _weight_vec: float = float(config.get("weight_vec", "RRF", "1.0"))
+    _rrf_k: int = int(config.get("k", "RRF", "60"))
 
     @classmethod
     def embedding(cls, text: str) -> list[float]:
@@ -40,12 +40,12 @@ class SearchEngine:
         return factory_db(SearchEngine.segment, SearchEngine.embedding)
 
     @classmethod
-    def build(cls, docs: list[tuple[str, str]], vault: str | None = None, update_existing: bool = False):
+    def build(cls, docs: list[tuple[str, str]], vault: str | None = None, update_existing: bool = False) -> None:
         if not docs:
             return  # 如果 docs 为空，直接返回
         if vault is None:
             vault = cls.default_vault
-        datas: list[tuple[str, str, str]] = []
+        data: list[tuple[str, str, str]] = []
         for source, text in docs:
             if not source or not text:
                 continue  # 跳过空字符串
@@ -57,19 +57,21 @@ class SearchEngine:
                 source_chunks: Generator[tuple[str, str, str], None, None] = (
                     (source, pard_id, content) for pard_id, content in cls.split(text)
                 )
-                datas.extend(source_chunks)
+                data.extend(source_chunks)
             except Exception as e:
                 logging.error(f"分割文档失败: {e}")
                 continue  # 继续处理下一个文档
-        cls._add(datas, vault)
+        cls._add(data, vault)
 
     @classmethod
-    def _add(cls, datas: list[tuple[str, str, str]], vault: str):
-        assert isinstance(datas, list)
+    def _add(cls, data: list[tuple[str, str, str]], vault: str) -> None:
+        if not data:
+            return
+
         request_docs = []
-        for data in datas:
-            if isinstance(data, tuple) and len(data) == 3:
-                _, _, content = data
+        for item in data:
+            if isinstance(item, tuple) and len(item) == 3:
+                _, _, content = item
             else:
                 raise Exception("Invalid document format")
             if content not in cls._embeddings_dict:
@@ -83,9 +85,9 @@ class SearchEngine:
             return
 
         logging.info("构建索引...")
-        for data in datas:
-            if isinstance(data, tuple) and len(data) == 3:
-                source, part_id, content = data
+        for item in data:
+            if isinstance(item, tuple) and len(item) == 3:
+                source, part_id, content = item
             else:
                 raise Exception("Invalid document format")
             store.insert_data((source, part_id, content), vault)
@@ -97,25 +99,27 @@ class SearchEngine:
         return cls.get().check_source(source, vault)
 
     @classmethod
-    def rm_source(cls, source: str, vault: str | None = None):
+    def rm_source(cls, source: str, vault: str | None = None) -> None:
         if vault is None:
             vault = cls.default_vault
         cls.get().rm_source(source, vault)
 
     @classmethod
-    def _reciprocal_rank_fusion(cls, fts_results, vec_results) -> list[tuple[str, str]]:
+    def _reciprocal_rank_fusion(
+        cls, fts_results: list[tuple[str, str]], vec_results: list[tuple[str, str]]
+    ) -> list[tuple[str, float]]:
         rank_dict = {}
 
         # Process FTS results
         for rank, (id, _) in enumerate(fts_results):
             if id not in rank_dict:
-                rank_dict[id] = 0
+                rank_dict[id] = 0.0
             rank_dict[id] += 1 / (cls._rrf_k + rank + 1) * cls._weight_fts
 
         # Process vector results
         for rank, (id, _) in enumerate(vec_results):
             if id not in rank_dict:
-                rank_dict[id] = 0
+                rank_dict[id] = 0.0
             rank_dict[id] += 1 / (cls._rrf_k + rank + 1) * cls._weight_vec
 
         # Sort by RRF score
@@ -129,8 +133,9 @@ class SearchEngine:
             raise Exception("No such vault")
 
         fts_results = store.search_fts(query, vault, top_n)
-        print(fts_results)
+        logging.debug(f"FTS results: {fts_results}")
         vec_results = store.search_vec(query, vault, top_n)
+        logging.debug(f"Vector results: {vec_results}")
         result_dict = dict(combine([fts_results, vec_results]))
         score_result = cls._reciprocal_rank_fusion(fts_results, vec_results)
         return [(i, result_dict[i]) for i in [i[0] for i in score_result]][:top_n]

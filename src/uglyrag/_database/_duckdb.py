@@ -10,7 +10,7 @@ from uglyrag._config import config
 
 from ._db_impl import Database
 
-db_filename: str = config.get("db_name", default="database.ddb")  # type: ignore
+db_filename: str = config.get("db_name", default="database.ddb")
 db_path = config.data_dir / db_filename
 
 
@@ -19,7 +19,7 @@ class DuckDBStore(Database):
     con: DuckDBPyConnection = field(init=False)
     dims: int = 0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not db_path.name.endswith(".ddb"):
             raise ValueError("无效的数据库文件路径，必须以 .ddb 结尾")
 
@@ -49,7 +49,7 @@ class DuckDBStore(Database):
 
         # 重新注册函数
         # 注册一个名为"segment"的SQL函数，用于文本分词
-        def segment_func(x):
+        def segment_func(x: str) -> str:
             return " ".join(self.segment(x))
 
         self.con.create_function("segment", segment_func, [VARCHAR], VARCHAR)
@@ -75,7 +75,7 @@ class DuckDBStore(Database):
             logging.error(f"检查或创建表失败: {e}")
             return False
 
-    def _create_table(self, vault: str):
+    def _create_table(self, vault: str) -> None:
         # 创建表
         # 创建数据表
         logging.debug(f"向量表维度为：{self.dims}")
@@ -89,7 +89,7 @@ class DuckDBStore(Database):
         # 重建索引
         # self.rebuild_index(vault)
 
-    def insert_data(self, data: tuple[str, str, str], vault: str):
+    def insert_data(self, data: tuple[str, str, str], vault: str) -> None:
         """
         插入数据
         """
@@ -110,7 +110,7 @@ class DuckDBStore(Database):
         )
         logging.debug("已插入数据")
 
-    def rebuild_index(self, vault: str):
+    def rebuild_index(self, vault: str) -> None:
         """
         重建全文搜索索引
         """
@@ -122,9 +122,11 @@ class DuckDBStore(Database):
         """
         if not self.check_vault(vault):
             return False
-        return self.con.execute(f"SELECT EXISTS(SELECT 1 FROM {vault} WHERE source=?)", (source,)).fetchone()[0] == 1  # type: ignore
+        result = self.con.execute(f"SELECT EXISTS(SELECT 1 FROM {vault} WHERE source=?)", (source,)).fetchone()
+        assert result is not None
+        return result[0] == 1
 
-    def rm_source(self, source: str, vault: str):
+    def rm_source(self, source: str, vault: str) -> None:
         """
         删除特定来源的数据
         """

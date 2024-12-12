@@ -3,30 +3,43 @@ from __future__ import annotations
 import configparser
 import logging
 import threading
+from collections.abc import Callable
 from datetime import datetime
-from functools import wraps
+from functools import cache, wraps
+from logging import StreamHandler
 from pathlib import Path
+from typing import Any, TypeVar
 
 import appdirs
 
+T = TypeVar("T")
+
 
 # 单例修饰器
-def singleton(cls):
-    instances = {}  # 存储类的实例
+def singleton(cls: type[T]) -> Callable[..., T]:
+    instances = {}
     lock = threading.Lock()  # 锁对象，保证线程安全
 
+    @cache  # 使用 lru_cache 提高缓存效率
     @wraps(cls)  # 保持原类的元数据
-    def get_instance(*args, **kwargs):
-        with lock:  # 保证线程同步
-            if cls not in instances:
-                logging.debug(f"正在创建新的 {cls.__name__} 实例")
-                instances[cls] = cls(*args, **kwargs)
+    def get_instance(*args: Any, **kwargs: Any) -> T:
+        if cls not in instances:
+            with lock:  # 保证线程同步
+                if cls not in instances:
+                    try:
+                        instance = cls(*args, **kwargs)
+                        logging.debug(f"尝试创建新的 {cls.__name__} 实例")
+                        logging.info(f"成功创建新的 {cls.__name__} 实例")
+                        instances[cls] = instance
+                    except Exception as e:
+                        logging.error(f"创建 {cls.__name__} 实例时发生错误: {e}")
+                        raise
         return instances[cls]
 
     return get_instance
 
 
-def configure_logger(logger, level_str):
+def configure_logger(logger: StreamHandler, level_str: str) -> None:
     # 将字符串转换为日志级别常量
     levels = {
         "DEBUG": logging.DEBUG,
@@ -45,7 +58,7 @@ def configure_logger(logger, level_str):
 
 @singleton
 class Config:
-    def __init__(self, app_name="uglyrag"):
+    def __init__(self, app_name: str = "uglyrag") -> None:
         # 基本日志配置
         self._configure_basic_logging()
 
@@ -55,7 +68,6 @@ class Config:
         # 读取 INI 文件
         # 获取 XDG 配置目录
         config_dir = Path(appdirs.user_config_dir(app_name, roaming=True))
-        data_dir = appdirs.user_data_dir(app_name, roaming=True)
         self.config_path = config_dir / "config.ini"
 
         try:
@@ -72,14 +84,15 @@ class Config:
         # 初始化配置文件是否发生变化的标志
         self._changed = False
 
-        self.data_dir = Path(self.get("data_dir", section="DEFAULT", default=data_dir))
+        data_dir = appdirs.user_data_dir(app_name, roaming=True)
+        self.data_dir: Path = Path(self.get("data_dir", section="DEFAULT", default=data_dir))
         # 创建数据目录
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
         # 配置日志输出到 data_dir 目录下的 log 文件
         self.configure_logging()
 
-    def _configure_basic_logging(self):
+    def _configure_basic_logging(self) -> None:
         # 创建日志记录器
         logger = logging.getLogger()
         logger.setLevel(logging.DEBUG)  # 设置日志记录器的最低级别为 DEBUG
@@ -99,7 +112,7 @@ class Config:
 
         logging.debug("基本日志配置完成")
 
-    def configure_logging(self):
+    def configure_logging(self) -> None:
         # 创建 logs 文件夹
         logs_dir = self.data_dir / "logs"
         logs_dir.mkdir(parents=True, exist_ok=True)
@@ -133,20 +146,20 @@ class Config:
 
         logging.debug(f"日志文件已配置为: {log_file}")
 
-    def get(self, option, section="DEFAULT", default: str = None):
+    def get(self, option: str, section: str = "DEFAULT", default: str = "") -> str:
         try:
             value = self.config.get(section, option)
             logging.debug(f"从节 '{section}' 中获取选项 '{option}': {value}")
             return value
         except (configparser.NoSectionError, configparser.NoOptionError):
-            if default is None:
-                logging.debug(f"节 '{section}' 中未找到选项 '{option}', 返回 None")
-                return None
-            logging.debug(f"节 '{section}' 中未找到选项 '{option}'，使用默认值: {default}")
-            self.set(option, default, section)
+            if default:
+                logging.debug(f"节 '{section}' 中未找到选项 '{option}'，使用默认值: {default}")
+                self.set(option, default, section)
+            else:
+                logging.debug(f"节 '{section}' 中未找到选项 '{option}', 返回 \"\"")
             return default
 
-    def set(self, option, value, section="DEFAULT"):
+    def set(self, option: str, value: str, section: str = "DEFAULT") -> None:
         if not option:
             raise ValueError("节和选项不能为空或 None")
 
@@ -166,11 +179,10 @@ class Config:
         self._changed = True  # 标记配置文件已更改
 
     # 保存配置文件
-    def save(self):
+    def save(self) -> None:
         # 如果配置文件没有变化，则不需要重新写入
         if not self._changed:
             logging.debug("配置文件没有变化，无需保存。")
-            return
 
         # 确保配置文件存在
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -182,7 +194,7 @@ class Config:
         self._changed = False
 
     # 注销 Config 实例时，保存配置文件
-    def __del__(self):
+    def __del__(self) -> None:
         self.save()
         logging.debug(f"{self.__class__.__name__} 实例正在被删除，配置已保存。")
 

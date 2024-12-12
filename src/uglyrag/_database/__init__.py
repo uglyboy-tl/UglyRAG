@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from uglyrag._config import config
 
 from ._db_impl import Database
-from ._duckdb import DuckDBStore
 from ._sqlite import SQLiteStore
 
 
-def factory_db(*args, db_type: str | None = None, **kwargs) -> Database:
+def factory_db(*args: Any, db_type: str | None = None, **kwargs: Any) -> Database:
     """
     工厂函数，根据配置文件选择数据库类型。
     :return: 数据库对象
@@ -20,6 +20,10 @@ def factory_db(*args, db_type: str | None = None, **kwargs) -> Database:
         logging.debug("使用 SQLite 数据库")
         return SQLiteStore(*args, **kwargs)
     elif db_type.lower() == "duckdb":
+        try:
+            from ._duckdb import DuckDBStore
+        except Exception as e:
+            raise ImportError("DuckDB 未安装，请先安装 DuckDB") from e
         logging.debug("使用 DuckDB 数据库")
         return DuckDBStore(*args, **kwargs)
     else:
