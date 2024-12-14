@@ -5,7 +5,7 @@ from typing import Any
 
 from uglyrag._config import config
 
-from ._db_impl import Database
+from ._database import Database
 from ._sqlite import SQLiteStore
 
 

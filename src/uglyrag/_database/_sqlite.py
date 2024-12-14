@@ -9,7 +9,7 @@ from sqlite_vec import serialize_float32
 
 from uglyrag._config import config
 
-from ._db_impl import Database
+from ._database import Database
 
 db_filename = config.get("db_name", default="database.db")
 db_path = config.data_dir / db_filename
@@ -19,6 +19,7 @@ db_path = config.data_dir / db_filename
 class SQLiteStore(Database):
     conn: Connection = field(init=False)
     cursor: Cursor = field(init=False)
+    dims: int = 0
 
     def __post_init__(self) -> None:
         """
@@ -27,12 +28,22 @@ class SQLiteStore(Database):
         此方法在类实例化后调用，用于初始化与SQLite数据库的连接，
         并配置必要的数据库扩展和函数。
         """
+        super().__post_init__()
         if not db_path.name.endswith(".db"):
             raise ValueError("无效的数据库文件路径，必须以 .db 结尾")
 
+        self.conn = self._connect_db()
+        # 创建游标对象用于执行 SQL 命令
+        self.cursor = self.conn.cursor()
+        logging.debug("游标对象创建成功")
+
+    def _connect_db(self) -> Connection:
+        """
+        连接到数据库。
+        """
         # 连接到 SQLite 数据库
         try:
-            self.conn = connect(db_path)
+            conn = connect(db_path)
             logging.debug(f"已连接到数据库: {db_path}")
         except Error as e:
             logging.error(f"连接数据库失败: {e}")
@@ -40,40 +51,38 @@ class SQLiteStore(Database):
 
         # 启用加载 SQLite 扩展
         try:
-            self.conn.enable_load_extension(True)
+            conn.enable_load_extension(True)
             try:
-                sqlite_vec.load(self.conn)
+                sqlite_vec.load(conn)
                 logging.debug("SQLite 扩展 `sqlite_vec` 加载成功")
             except Exception as e:
                 logging.error(f"加载 SQLite 扩展 `sqlite_vec` 失败: {e}")
                 raise
         finally:
             # 确保禁用扩展加载以保证安全性
-            self.conn.enable_load_extension(False)
+            conn.enable_load_extension(False)
             logging.debug("已禁用 SQLite 扩展加载")
 
         # 检查版本信息
         self._check_versions()
         logging.debug("版本信息检查完成")
 
-        # 创建游标对象用于执行 SQL 命令
-        self.cursor = self.conn.cursor()
-        logging.debug("游标对象创建成功")
-
         # 重新注册函数
         # 注册一个名为"segment"的SQL函数，用于文本分词
         def segment_func(x: str) -> str:
             return " ".join(self.segment(x))
 
-        self.conn.create_function("segment", 1, segment_func)
+        conn.create_function("segment", 1, segment_func)
         logging.debug("SQL函数 `segment` 注册成功")
 
         # 注册一个名为"embedding"的SQL函数，用于生成文本的嵌入表示
         def embedding_func(x: str) -> bytes:
             return serialize_float32(self.embedding(x))
 
-        self.conn.create_function("embedding", 1, embedding_func)
+        conn.create_function("embedding", 1, embedding_func)
         logging.debug("SQL函数 `embedding` 注册成功")
+
+        return conn
 
     def _check_versions(self) -> tuple[str, str]:
         """
@@ -110,9 +119,7 @@ class SQLiteStore(Database):
         # 创建全文搜索表
         self.cursor.execute(f"CREATE VIRTUAL TABLE IF NOT EXISTS {vault}_fts USING fts5(indexed_content);")
         # 创建向量搜索表
-        dims = len(self.embedding("Hello"))
-        self.cursor.execute(f"CREATE VIRTUAL TABLE IF NOT EXISTS {vault}_vec USING vec0(embedding FLOAT[{str(dims)}]);")
-        logging.debug(f"向量表维度为：{dims}")
+        self.cursor.execute(f"CREATE VIRTUAL TABLE IF NOT EXISTS {vault}_vec USING vec0(embedding FLOAT[{self.dims}]);")
         self._create_trigger(vault)
 
         # 提交更改
@@ -140,7 +147,7 @@ class SQLiteStore(Database):
         )
 
     # 插入数据
-    def insert_data(self, data: tuple[str, str, str], vault: str) -> None:
+    def _background_insert(self, data: tuple[str, str, str], vault: str) -> None:
         if not self.check_vault(vault):
             raise Exception("No such vault")
 
@@ -159,13 +166,13 @@ class SQLiteStore(Database):
             return False
         return self.cursor.execute(f"SELECT EXISTS(SELECT 1 FROM {vault} WHERE source=?)", (source,)).fetchone()[0] == 1
 
-    def rm_source(self, source: str, vault: str) -> None:
+    def _background_del_source(self, source: str, vault: str) -> None:
         if not self.check_vault(vault):
             raise Exception("No such vault")
         self.cursor.execute(f"DELETE FROM {vault} WHERE source=?", (source,))
         self.conn.commit()
 
-    def search_fts(self, query: str, vault: str, top_n: int = 5) -> list[tuple[str, str]]:
+    def _background_search_fts(self, query: str, vault: str, top_n: int = 5) -> list[tuple[str, str]]:
         self.cursor.execute(
             f"SELECT {vault}.id, {vault}.content FROM {vault}_fts join {vault} on {vault}_fts.rowid={vault}.id WHERE {vault}_fts MATCH ? ORDER BY bm25({vault}_fts) LIMIT ?",
             (" OR ".join(self.segment(query)), top_n),
@@ -198,7 +205,7 @@ class SQLiteStore(Database):
         '''
         return self.cursor.fetchall()
 
-    def search_vec(self, query: str, vault: str, top_n: int = 5) -> list[tuple[str, str]]:
+    def _background_search_vec(self, query: str, vault: str, top_n: int = 5) -> list[tuple[str, str]]:
         self.cursor.execute(
             f"SELECT {vault}.id, {vault}.content FROM {vault}_vec join {vault} on {vault}_vec.rowid={vault}.id WHERE embedding MATCH ? AND k = ? ORDER BY distance;",
             (serialize_float32(self.embedding(query)), top_n),

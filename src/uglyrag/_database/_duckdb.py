@@ -8,7 +8,7 @@ from duckdb.typing import FLOAT, VARCHAR
 
 from uglyrag._config import config
 
-from ._db_impl import Database
+from ._database import Database
 
 db_filename: str = config.get("db_name", default="database.ddb")
 db_path = config.data_dir / db_filename
@@ -16,18 +16,20 @@ db_path = config.data_dir / db_filename
 
 @dataclass
 class DuckDBStore(Database):
-    con: DuckDBPyConnection = field(init=False)
+    conn: DuckDBPyConnection = field(init=False)
     dims: int = 0
 
     def __post_init__(self) -> None:
+        super().__post_init__()
         if not db_path.name.endswith(".ddb"):
             raise ValueError("无效的数据库文件路径，必须以 .ddb 结尾")
 
-        self.dims = len(self.embedding("Hello"))
+        self.conn = self._connect_db()
 
+    def _connect_db(self) -> DuckDBPyConnection:
         # 连接到 DuckDB 数据库
         try:
-            self.con = connect(db_path, config={"hnsw_enable_experimental_persistence": 1})
+            conn = connect(db_path, config={"hnsw_enable_experimental_persistence": 1})
             logging.debug(f"已连接到数据库: {db_path}")
         except Error as e:
             logging.error(f"连接数据库失败: {e}")
@@ -36,12 +38,12 @@ class DuckDBStore(Database):
         # 安装和加载 DuckDB 扩展
         try:
             """# fts 扩展会被自动加载
-            self.con.install_extension("fts")
-            self.con.load_extension("fts")
+            conn.install_extension("fts")
+            conn.load_extension("fts")
             logging.debug("DuckDB 扩展 `fts` 安装成功")
             """
-            self.con.install_extension("vss")
-            self.con.load_extension("vss")
+            conn.install_extension("vss")
+            conn.load_extension("vss")
             logging.debug("DuckDB 扩展 `vss` 安装成功")
         except Error as e:
             logging.error(f"安装 DuckDB 扩展失败: {e}")
@@ -52,11 +54,13 @@ class DuckDBStore(Database):
         def segment_func(x: str) -> str:
             return " ".join(self.segment(x))
 
-        self.con.create_function("segment", segment_func, [VARCHAR], VARCHAR)
+        conn.create_function("segment", segment_func, [VARCHAR], VARCHAR)
         logging.debug("SQL函数 `segment` 注册成功")
 
-        self.con.create_function("embedding", self.embedding, [VARCHAR], list_type(FLOAT))
+        conn.create_function("embedding", self.embedding, [VARCHAR], list_type(FLOAT))
         logging.debug("SQL函数 `embedding` 注册成功")
+
+        return conn
 
     def check_vault(self, vault: str) -> bool:
         """
@@ -66,8 +70,8 @@ class DuckDBStore(Database):
             logging.warning(f"表名 {vault} 结尾为 _fts 或 _vec，将无法使用。")
             return False
         try:
-            self.con.execute(f"SELECT * FROM information_schema.tables WHERE table_name='{vault}'")
-            if not bool(self.con.fetchone()):
+            self.conn.execute(f"SELECT * FROM information_schema.tables WHERE table_name='{vault}'")
+            if not bool(self.conn.fetchone()):
                 self._create_table(vault)
             return True
         except Error as e:
@@ -77,16 +81,15 @@ class DuckDBStore(Database):
     def _create_table(self, vault: str) -> None:
         # 创建表
         # 创建数据表
-        logging.debug(f"向量表维度为：{self.dims}")
-        self.con.execute(
+        self.conn.execute(
             f"CREATE TABLE IF NOT EXISTS {vault} (id INTEGER PRIMARY KEY, content TEXT NOT NULL, content_fts TEXT NOT NULL, content_vec FLOAT[{self.dims}], part_id TEXT, source TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
         )
         # 创建自增ID列
-        self.con.execute("CREATE SEQUENCE seq_id START 1;")
+        self.conn.execute("CREATE SEQUENCE seq_id START 1;")
         # 创建向量搜索索引
-        self.con.execute(f"CREATE INDEX {vault}_vec_index ON {vault} USING HNSW (content_vec);")
+        self.conn.execute(f"CREATE INDEX {vault}_vec_index ON {vault} USING HNSW (content_vec);")
 
-    def insert_data(self, data: tuple[str, str, str], vault: str) -> None:
+    def _background_insert(self, data: tuple[str, str, str], vault: str) -> None:
         """
         插入数据
         """
@@ -101,17 +104,17 @@ class DuckDBStore(Database):
         content_fts = " ".join(self.segment(content))
         content_vec = self.embedding(content)
         new_data = (source, part_id, content, content_fts, content_vec)
-        self.con.execute(
+        self.conn.execute(
             f"INSERT INTO {vault} (id,source, part_id, content, content_fts, content_vec) VALUES (nextval('seq_id'),?,?,?,?,?)",
             new_data,
         )
         logging.debug("已插入数据")
 
-    def rebuild_index(self, vault: str) -> None:
+    def _background_rebuild_index(self, vault: str) -> None:
         """
         重建全文搜索索引
         """
-        self.con.execute(f"PRAGMA create_fts_index({vault}, id, content_fts, overwrite = 1)")
+        self.conn.execute(f"PRAGMA create_fts_index({vault}, id, content_fts, overwrite = 1)")
 
     def check_source(self, source: str, vault: str) -> bool:
         """
@@ -119,40 +122,40 @@ class DuckDBStore(Database):
         """
         if not self.check_vault(vault):
             return False
-        result = self.con.execute(f"SELECT EXISTS(SELECT 1 FROM {vault} WHERE source=?)", (source,)).fetchone()
+        result = self.conn.execute(f"SELECT EXISTS(SELECT 1 FROM {vault} WHERE source=?)", (source,)).fetchone()
         assert result is not None
         return result[0] == 1
 
-    def rm_source(self, source: str, vault: str) -> None:
+    def _background_del_source(self, source: str, vault: str) -> None:
         """
         删除特定来源的数据
         """
         if not self.check_vault(vault):
             raise Exception("No such vault")
-        self.con.execute(f"DELETE FROM {vault} WHERE source=?", (source,))
+        self.conn.execute(f"DELETE FROM {vault} WHERE source=?", (source,))
 
-    def search_fts(self, query: str, vault: str, top_n: int = 5) -> list[tuple[str, str]]:
+    def _background_search_fts(self, query: str, vault: str, top_n: int = 5) -> list[tuple[str, str]]:
         """
         使用全文搜索查询
         :param query: 查询词
         :param vault: 存储库名称
         :param top_n: 返回结果数量
         """
-        self.con.execute(
+        self.conn.execute(
             f"SELECT id, content FROM (SELECT *, fts_main_{vault}.match_bm25(id, ?) AS score FROM {vault}) WHERE score IS NOT NULL ORDER BY score DESC LIMIT ?",
             (" ".join(self.segment(query)), top_n),
         )
-        return self.con.fetchall()
+        return self.conn.fetchall()
 
-    def search_vec(self, query: str, vault: str, top_n: int = 5) -> list[tuple[str, str]]:
+    def _background_search_vec(self, query: str, vault: str, top_n: int = 5) -> list[tuple[str, str]]:
         """
         使用向量搜索查询
         :param query: 查询词
         :param vault: 存储库名称
         :param top_n: 返回结果数量
         """
-        self.con.execute(
+        self.conn.execute(
             f"SELECT {vault}.id, {vault}.content FROM {vault} ORDER BY array_distance(content_vec, embedding(?)::FLOAT[{self.dims}]) LIMIT ?",
             (query, top_n),
         )
-        return self.con.fetchall()
+        return self.conn.fetchall()

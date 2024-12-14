@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import Callable, Generator
 from functools import cache
@@ -54,7 +55,7 @@ class SearchEngine:
             if cls._check_source(source, vault):  # 检查是否已经存在
                 if not update_existing:  # 如果已经存在，且不允许更新，则跳过
                     continue
-                cls.rm_source(source, vault)  # 如果已经存在，则删除, 并重建索引
+                asyncio.run(cls.rm_source(source, vault))  # 如果已经存在，则删除, 并重建索引
             try:
                 source_chunks: Generator[tuple[str, str, str], None, None] = (
                     (source, pard_id, content) for pard_id, content in cls.split(text)
@@ -63,10 +64,10 @@ class SearchEngine:
             except Exception as e:
                 logging.error(f"分割文档失败: {e}")
                 continue  # 继续处理下一个文档
-        cls._add(data, vault)
+        asyncio.run(cls._add(data, vault))
 
     @classmethod
-    def _add(cls, data: list[tuple[str, str, str]], vault: str) -> None:
+    async def _add(cls, data: list[tuple[str, str, str]], vault: str) -> None:
         if not data:
             return
 
@@ -87,24 +88,25 @@ class SearchEngine:
             return
 
         logging.info("构建索引...")
+        # TODO: 修改为异步逻辑
         for item in data:
             if isinstance(item, tuple) and len(item) == 3:
                 source, part_id, content = item
             else:
                 raise Exception("Invalid document format")
-            store.insert_data((source, part_id, content), vault)
+            await store.insert_data((source, part_id, content), vault)
 
-        store.rebuild_index(vault)
+        await store.rebuild_index(vault)
 
     @classmethod
     def _check_source(cls, source: str, vault: str) -> bool:
         return cls.get().check_source(source, vault)
 
     @classmethod
-    def rm_source(cls, source: str, vault: str | None = None) -> None:
+    async def rm_source(cls, source: str, vault: str | None = None) -> None:
         if vault is None:
             vault = cls.default_vault
-        cls.get().rm_source(source, vault)
+        await cls.get().del_source(source, vault)
 
     @classmethod
     def _reciprocal_rank_fusion(
@@ -129,14 +131,12 @@ class SearchEngine:
         return sorted_results
 
     @classmethod
-    def _hybrid_search(cls, query: str, vault: str, top_n: int = 5) -> list[tuple[str, str]]:
+    async def _hybrid_search(cls, query: str, vault: str, top_n: int = 5) -> list[tuple[str, str]]:
         store = cls.get()
         if not store.check_vault(vault):
             raise Exception("No such vault")
-
-        fts_results = store.search_fts(query, vault, top_n)
+        fts_results, vec_results = await store.search(query, vault, top_n)
         logging.debug(f"FTS results: {fts_results}")
-        vec_results = store.search_vec(query, vault, top_n)
         logging.debug(f"Vector results: {vec_results}")
         result_dict = dict(combine([fts_results, vec_results]))
         score_result = cls._reciprocal_rank_fusion(fts_results, vec_results)
@@ -156,10 +156,10 @@ class SearchEngine:
             vault = cls.default_vault
         if cls.rerank is None:
             logging.warning("使用混合搜索返回结果")
-            return cls._hybrid_search(query, vault, top_n)
+            return asyncio.run(cls._hybrid_search(query, vault, top_n))
         else:
             store = cls.get()
             if not store.check_vault(vault):
                 raise Exception("No such vault")
-            results = combine([store.search_fts(query, vault, top_n), store.search_vec(query, vault, top_n)])
+            results = combine(asyncio.run(store.search(query, vault, top_n)))
             return cls._rerank(query, results)[:top_n]
