@@ -97,6 +97,9 @@ class SQLiteStore(Database):
             logging.error(f"执行 SQL 失败: {e}")
             raise
 
+    def reset(self) -> None:
+        return
+
     def check_vault(self, vault: str) -> bool:
         if vault.endswith("_fts") or vault.endswith("_vec"):
             logging.warning(f"表名 {vault} 结尾为 _fts 或 _vec，将无法使用。")

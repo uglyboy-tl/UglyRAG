@@ -83,20 +83,24 @@ class SearchEngine:
         for doc, i in zip(request_docs, embeddings):
             cls._embeddings_dict[doc] = i
 
-        store = cls.get()
-        if not store.check_vault(vault):
-            return
+        with cls.get() as store:
+            if not store.check_vault(vault):
+                raise Exception("No such vault")
 
-        logging.info("构建索引...")
-        # TODO: 修改为异步逻辑
-        for item in data:
-            if isinstance(item, tuple) and len(item) == 3:
-                source, part_id, content = item
-            else:
-                raise Exception("Invalid document format")
-            await store.insert_data((source, part_id, content), vault)
+            logging.info("构建索引...")
+            # TODO: 修改为异步逻辑
+            tasks = []
+            for item in data:
+                if isinstance(item, tuple) and len(item) == 3:
+                    source, part_id, content = item
+                else:
+                    raise Exception("Invalid document format")
+                task = asyncio.create_task(store.insert_data((source, part_id, content), vault))
+                tasks.append(task)
+                # await store.insert_data((source, part_id, content), vault)
 
-        await store.rebuild_index(vault)
+            await asyncio.gather(*tasks)
+            await store.rebuild_index(vault)
 
     @classmethod
     def _check_source(cls, source: str, vault: str) -> bool:
@@ -106,7 +110,8 @@ class SearchEngine:
     async def rm_source(cls, source: str, vault: str | None = None) -> None:
         if vault is None:
             vault = cls.default_vault
-        await cls.get().del_source(source, vault)
+        with cls.get() as store:
+            await store.del_source(source, vault)
 
     @classmethod
     def _reciprocal_rank_fusion(
@@ -131,18 +136,6 @@ class SearchEngine:
         return sorted_results
 
     @classmethod
-    async def _hybrid_search(cls, query: str, vault: str, top_n: int = 5) -> list[tuple[str, str]]:
-        store = cls.get()
-        if not store.check_vault(vault):
-            raise Exception("No such vault")
-        fts_results, vec_results = await store.search(query, vault, top_n)
-        logging.debug(f"FTS results: {fts_results}")
-        logging.debug(f"Vector results: {vec_results}")
-        result_dict = dict(combine([fts_results, vec_results]))
-        score_result = cls._reciprocal_rank_fusion(fts_results, vec_results)
-        return [(i, result_dict[i]) for i in [i[0] for i in score_result]][:top_n]
-
-    @classmethod
     def _rerank(cls, query: str, results: list[tuple[str, str]]) -> list[tuple[str, str]]:
         if not results or cls.rerank is None:
             return []
@@ -154,12 +147,15 @@ class SearchEngine:
     def search(cls, query: str, vault: str | None = None, top_n: int = 5) -> list[tuple[str, str]]:
         if vault is None:
             vault = cls.default_vault
-        if cls.rerank is None:
-            logging.warning("使用混合搜索返回结果")
-            return asyncio.run(cls._hybrid_search(query, vault, top_n))
-        else:
-            store = cls.get()
+        with cls.get() as store:
             if not store.check_vault(vault):
                 raise Exception("No such vault")
-            results = combine(asyncio.run(store.search(query, vault, top_n)))
-            return cls._rerank(query, results)[:top_n]
+            results = asyncio.run(store.search(query, vault, top_n))
+            if cls.rerank is None:
+                logging.warning("使用混合搜索返回结果")
+                fts_results, vec_results = results
+                result_dict = dict(combine(results))
+                score_result = cls._reciprocal_rank_fusion(fts_results, vec_results)
+                return [(i, result_dict[i]) for i in [i[0] for i in score_result]][:top_n]
+            else:
+                return cls._rerank(query, combine(results))[:top_n]

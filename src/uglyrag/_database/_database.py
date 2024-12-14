@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
+from types import TracebackType
 from typing import Any
 
 
@@ -21,6 +22,21 @@ class Database(ABC):
 
     def __post_init__(self) -> None:
         self.dims = len(self.embedding("Hello"))
+
+    def __enter__(self) -> Database:
+        return self
+
+    def __exit__(
+        self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None
+    ) -> None:
+        return
+
+    @abstractmethod
+    def reset(self) -> None:
+        """
+        重置数据库
+        """
+        pass
 
     @abstractmethod
     def check_vault(self, vault: str) -> bool:

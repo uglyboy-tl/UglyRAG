@@ -62,6 +62,9 @@ class DuckDBStore(Database):
 
         return conn
 
+    def reset(self) -> None:
+        return
+
     def check_vault(self, vault: str) -> bool:
         """
         检查数据库是否存在，不存在则创建
