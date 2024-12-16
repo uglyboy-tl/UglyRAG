@@ -19,6 +19,14 @@ def config_instance():
     return config
 
 
+def setup_config(config_instance, section: str, option: str, value: str):
+    """辅助函数：设置配置内容"""
+    config_instance.config.read_string(f"""
+    [{section}]
+    {option} = {value}
+    """)
+
+
 def test_config_initialization():
     config = Config()
     assert config.config_path.name == "config.ini"
@@ -27,46 +35,31 @@ def test_config_initialization():
 
 
 def test_get_option_exists(config_instance):
-    config_instance.config.read_string("""
-    [TEST]
-    test_option = test_value
-    """)
+    setup_config(config_instance, "TEST", "test_option", "test_value")
     result = config_instance.get("test_option", "TEST")
     assert result == "test_value"
 
 
 def test_get_option_exists_with_default(config_instance):
-    config_instance.config.read_string("""
-    [TEST]
-    test_option = test_value
-    """)
+    setup_config(config_instance, "TEST", "test_option", "test_value")
     result = config_instance.get("test_option", "TEST", default="default_value")
     assert result == "test_value"
 
 
 def test_get_option_not_exists_without_default(config_instance):
-    config_instance.config.read_string("""
-    [TEST]
-    other_option = other_value
-    """)
+    setup_config(config_instance, "TEST", "other_option", "other_value")
     result = config_instance.get("non_existent_option", "TEST")
     assert result == ""
 
 
 def test_get_option_not_exists_with_default(config_instance):
-    config_instance.config.read_string("""
-    [TEST]
-    other_option = other_value
-    """)
+    setup_config(config_instance, "TEST", "other_option", "other_value")
     result = config_instance.get("non_existent_option", "TEST", default="default_value")
     assert result == "default_value"
 
 
 def test_get_option_in_non_default_section(config_instance):
-    config_instance.config.read_string("""
-    [ANOTHER_TEST]
-    another_option = another_value
-    """)
+    setup_config(config_instance, "ANOTHER_TEST", "another_option", "another_value")
     result = config_instance.get("another_option", "ANOTHER_TEST")
     assert result == "another_value"
 
@@ -188,4 +181,4 @@ def test_configure_logging():
     config = Config()
     with patch.object(logging, "getLogger", return_value=logging.getLogger()) as mock_get_logger:
         config.configure_logging()
-        mock_get_logger.assert_called_once()
+        mock_get_logger.assert_called()

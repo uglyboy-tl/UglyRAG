@@ -25,7 +25,7 @@ def configure_logger(logger: StreamHandler | FileHandler, level_str: str) -> Non
     logger.setLevel(log_level)
 
 
-def configure_basic_logging() -> None:
+def configure_basic_logging(log_level: str = "INFO") -> None:
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
@@ -33,14 +33,14 @@ def configure_basic_logging() -> None:
         logger.removeHandler(handler)
 
     stream_handler = StreamHandler()
-    stream_handler.setLevel(logging.INFO)
+    configure_logger(stream_handler, log_level)
     stream_handler.setFormatter(create_formatter())
 
     logger.addHandler(stream_handler)
     logging.debug("基本日志配置完成")
 
 
-def configure_file_logging(data_dir: Path, log_level: str, log_file_name: str = "") -> None:
+def configure_file_logging(data_dir: Path, log_file_name: str = "") -> None:
     logs_dir = data_dir / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
 
@@ -51,18 +51,10 @@ def configure_file_logging(data_dir: Path, log_level: str, log_file_name: str = 
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    for handler in logger.handlers[:]:
-        logger.removeHandler(handler)
-
     file_handler = FileHandler(log_file, mode="a", encoding="utf-8")
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(create_formatter())
 
-    stream_handler = StreamHandler()
-    configure_logger(stream_handler, log_level)
-    stream_handler.setFormatter(create_formatter())
-
     logger.addHandler(file_handler)
-    logger.addHandler(stream_handler)
 
     logging.debug(f"日志文件已配置为: {log_file}")

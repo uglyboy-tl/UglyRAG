@@ -49,7 +49,8 @@ class Config:
 
     def configure_logging(self) -> None:
         log_level = self.get("level", "LOGGING", "info")
-        configure_file_logging(self.data_dir, log_level)
+        configure_basic_logging(log_level)
+        configure_file_logging(self.data_dir)
 
     def get(self, option: str, section: str = "DEFAULT", default: str = "") -> str:
         try:
