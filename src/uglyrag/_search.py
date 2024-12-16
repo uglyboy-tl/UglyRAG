@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 from collections.abc import Callable, Generator
 from functools import cache
@@ -11,11 +10,11 @@ from uglyrag._database import Database, factory_db
 
 
 # 合并搜索结果，搜索结果的结构是 List[(id, content)]
-def combine(results: list[list[tuple[str, str]]]) -> list[tuple[str, str]]:
+def merge_search_results(results: list[list[tuple[str, str]]]) -> dict[str, str]:
     results_dict = dict(results[0])
     for item in results[1:]:
         results_dict.update(dict(item))
-    return list(results_dict.items())
+    return results_dict
 
 
 class SearchEngine:
@@ -42,7 +41,15 @@ class SearchEngine:
         return factory_db(SearchEngine.segment, SearchEngine.embedding)
 
     @classmethod
-    def build(cls, docs: list[tuple[Any, str]], vault: str | None = None, update_existing: bool = False) -> None:
+    def build(
+        cls,
+        docs: list[tuple[Any, str]],
+        vault: str | None = None,
+        reset_db: bool = False,
+        update_exist: bool = False,
+    ) -> None:
+        if reset_db:
+            cls.get().reset()
         if not docs:
             return  # 如果 docs 为空，直接返回
         if vault is None:
@@ -52,10 +59,10 @@ class SearchEngine:
             source = str(source)
             if not source or not text:
                 continue  # 跳过空字符串
-            if cls._check_source(source, vault):  # 检查是否已经存在
-                if not update_existing:  # 如果已经存在，且不允许更新，则跳过
-                    continue
-                asyncio.run(cls.rm_source(source, vault))  # 如果已经存在，则删除, 并重建索引
+            if (
+                cls._check_source(source, vault, rm_if_exist=update_exist) and not update_exist
+            ):  # 如果已经存在，且不允许更新，则跳过
+                continue
             try:
                 source_chunks: Generator[tuple[str, str, str], None, None] = (
                     (source, pard_id, content) for pard_id, content in cls.split(text)
@@ -64,10 +71,10 @@ class SearchEngine:
             except Exception as e:
                 logging.error(f"分割文档失败: {e}")
                 continue  # 继续处理下一个文档
-        asyncio.run(cls._add(data, vault))
+        cls._add(data, vault)
 
     @classmethod
-    async def _add(cls, data: list[tuple[str, str, str]], vault: str) -> None:
+    def _add(cls, data: list[tuple[str, str, str]], vault: str) -> None:
         if not data:
             return
 
@@ -84,39 +91,23 @@ class SearchEngine:
             cls._embeddings_dict[doc] = i
 
         with cls.get() as store:
-            if not store.check_vault(vault):
-                raise Exception("No such vault")
-
             logging.info("构建索引...")
-            # TODO: 修改为异步逻辑
-            tasks = []
-            for item in data:
-                if isinstance(item, tuple) and len(item) == 3:
-                    source, part_id, content = item
-                else:
-                    raise Exception("Invalid document format")
-                task = asyncio.create_task(store.insert_data((source, part_id, content), vault))
-                tasks.append(task)
-                # await store.insert_data((source, part_id, content), vault)
-
-            await asyncio.gather(*tasks)
-            await store.rebuild_index(vault)
+            store.insert_data(data, vault)
+            store.rebuild_index(vault)
 
     @classmethod
-    def _check_source(cls, source: str, vault: str) -> bool:
-        return cls.get().check_source(source, vault)
-
-    @classmethod
-    async def rm_source(cls, source: str, vault: str | None = None) -> None:
+    def _check_source(cls, source: str, vault: str | None = None, rm_if_exist: bool = False) -> bool:
         if vault is None:
             vault = cls.default_vault
-        with cls.get() as store:
-            await store.del_source(source, vault)
+        if not cls.get().check_source(source, vault):
+            return False
+        return not rm_if_exist or cls.get().del_source(source, vault)
 
     @classmethod
-    def _reciprocal_rank_fusion(
+    def _reciprocal_rank(
         cls, fts_results: list[tuple[str, str]], vec_results: list[tuple[str, str]]
-    ) -> list[tuple[str, float]]:
+    ) -> list[tuple[str, str]]:
+        result_dict = merge_search_results([fts_results, vec_results])
         rank_dict = {}
 
         # Process FTS results
@@ -133,15 +124,19 @@ class SearchEngine:
 
         # Sort by RRF score
         sorted_results = sorted(rank_dict.items(), key=lambda x: x[1], reverse=True)
-        return sorted_results
+        return [(i, result_dict[i]) for i, _ in sorted_results]
 
     @classmethod
-    def _rerank(cls, query: str, results: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    def _rerank(cls, query: str, results: dict[str, str]) -> list[tuple[str, str]]:
         if not results or cls.rerank is None:
             return []
-        scores = cls.rerank(query, [i[1] for i in results])
-        sorted_results = sorted(zip(results, scores), key=lambda x: x[1], reverse=True)
-        return [i[0] for i in sorted_results]
+        scores = cls.rerank(query, [content for _, content in results.items()])
+        sorted_results = sorted(
+            ((key, value, score) for (key, value), score in zip(results.items(), scores)),
+            key=lambda x: x[2],
+            reverse=True,
+        )
+        return [(key, value) for key, value, _ in sorted_results]
 
     @classmethod
     def search(cls, query: str, vault: str | None = None, top_n: int = 5) -> list[tuple[str, str]]:
@@ -150,12 +145,10 @@ class SearchEngine:
         with cls.get() as store:
             if not store.check_vault(vault):
                 raise Exception("No such vault")
-            results = asyncio.run(store.search(query, vault, top_n))
+            results = store.search(query, vault, top_n)
             if cls.rerank is None:
                 logging.warning("使用混合搜索返回结果")
-                fts_results, vec_results = results
-                result_dict = dict(combine(results))
-                score_result = cls._reciprocal_rank_fusion(fts_results, vec_results)
-                return [(i, result_dict[i]) for i in [i[0] for i in score_result]][:top_n]
+                fts_results, vec_results = results[:2]
+                return cls._reciprocal_rank(fts_results, vec_results)[:top_n]
             else:
-                return cls._rerank(query, combine(results))[:top_n]
+                return cls._rerank(query, merge_search_results(results))[:top_n]
