@@ -47,7 +47,7 @@ jieba = [
 repository = "https://github.com/uglyboy-tl/UglyRAG"
 
 [tool.codespell]
-skip = '*.po, src/data/*'
+skip = 'src/data/*'
 
 [tool.mypy]
 disallow_incomplete_defs = true
