@@ -160,7 +160,7 @@ class Config:
             return default
 
     def set(self, option: str, value: str, section: str = "DEFAULT") -> None:
-        if not option:
+        if not option or not section:
             raise ValueError("节和选项不能为空或 None")
 
         # 基本验证以防止注入攻击
@@ -183,6 +183,7 @@ class Config:
         # 如果配置文件没有变化，则不需要重新写入
         if not self._changed:
             logging.debug("配置文件没有变化，无需保存。")
+            return
 
         # 确保配置文件存在
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
