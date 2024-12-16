@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from uglyrag._config import config
+from uglyrag.config import config
 
 _split_module = config.get("split", "MODULES")
 split: Callable[[str], list[tuple[str, str]]] | None = None

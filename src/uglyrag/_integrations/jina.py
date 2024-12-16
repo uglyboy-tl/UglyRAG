@@ -5,7 +5,7 @@ from typing import Any
 
 import requests
 
-from uglyrag._config import Config
+from uglyrag.config import Config
 
 config = Config()
 api_key = config.get("api_key", "JINA")

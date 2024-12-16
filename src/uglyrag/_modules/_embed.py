@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from uglyrag._config import config
+from uglyrag.config import config
 
 _embedding_module = config.get("embedding", "MODULES", "JINA")
 embeddings: Callable[[list[str]], list[list[float]]] | None = None

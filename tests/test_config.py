@@ -2,22 +2,14 @@ from __future__ import annotations
 
 import configparser
 import logging
-from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING, StreamHandler
 from pathlib import Path
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import mock_open, patch
 
 import pytest
 
-from uglyrag._config import Config, configure_logger, singleton
+from uglyrag.config import Config
 
 logging.basicConfig(level=logging.CRITICAL)
-
-
-# 测试用的简单类，用于验证singleton装饰器
-@singleton
-class TestSingletonClass:
-    def __init__(self, value):
-        self.value = value
 
 
 @pytest.fixture
@@ -27,54 +19,11 @@ def config_instance():
     return config
 
 
-# 创建一个Config对象的fixture
-@pytest.fixture
-def config_save_fixture(tmp_path):
+def test_config_initialization():
     config = Config()
-    config.config = MagicMock(spec=configparser.ConfigParser)
-    config.config_path = tmp_path / "test_config.ini"
-    config._changed = False  # 假设配置已更改，需要保存
-    return config
-
-
-def test_singleton_creation():
-    # 测试实例的创建
-    instance1 = TestSingletonClass(10)
-    instance2 = TestSingletonClass(10)
-
-    # 验证是否为同一个实例
-    assert instance1 is instance2
-    assert instance1.value == instance2.value
-
-
-def test_singleton_different_args():
-    # 使用不同的参数实例化类，验证是否仍然为同一个实例
-    instance1 = TestSingletonClass(10)
-    instance2 = TestSingletonClass(20)
-
-    assert instance1 is instance2
-    assert instance1.value == instance2.value
-
-
-def test_configure_logger_level():
-    logger = StreamHandler()
-    configure_logger(logger, "DEBUG")
-    assert logger.level == DEBUG
-
-    configure_logger(logger, "INFO")
-    assert logger.level == INFO
-
-    configure_logger(logger, "WARNING")
-    assert logger.level == WARNING
-
-    configure_logger(logger, "ERROR")
-    assert logger.level == ERROR
-
-    configure_logger(logger, "CRITICAL")
-    assert logger.level == CRITICAL
-
-    configure_logger(logger, "INVALID_LEVEL")
-    assert logger.level == INFO
+    assert config.config_path.name == "config.ini"
+    assert config.data_dir.name == "uglyrag"
+    assert config._changed is False
 
 
 def test_get_option_exists(config_instance):
@@ -185,51 +134,58 @@ def test_set_option_in_existing_section(config_instance):
 
 
 # 测试：确保配置文件被写入正确的内容
-def test_save_config_file_unchanged(config_save_fixture):
-    config_save_fixture.config["DEFAULT"] = {"Setting1": "Value1"}
+def test_save_config_file_unchanged(config):
+    config.config["DEFAULT"] = {"Setting1": "Value1"}
     with patch.object(Path, "open", mock_open()) as mocked_file:
-        config_save_fixture.save()
+        config.save()
 
         # 检查文件是否没有被打开
         mocked_file.assert_not_called()
 
         # 检查配置内容是否没有被写入
-        config_save_fixture.config.write.assert_not_called()
+        config.config.write.assert_not_called()
 
         # 检查更改标志是否仍然为未更改状态
-        assert config_save_fixture._changed is False
+        assert config._changed is False
 
 
 # 测试：如果配置没有变化，则不写入文件
-def test_save_config_file_changed(config_save_fixture):
-    config_save_fixture.config["DEFAULT"] = {"Setting1": "Value1"}
-    config_save_fixture._changed = True  # 手动设置配置已更改
+def test_save_config_file_changed(config):
+    config.config["DEFAULT"] = {"Setting1": "Value1"}
+    config._changed = True  # 手动设置配置已更改
     with patch.object(Path, "open", mock_open()) as mocked_file:
-        config_save_fixture.save()
+        config.save()
 
         # 检查文件是否以写模式打开
         mocked_file.assert_called_once_with("w")  # 检查是否调用了写入方法
 
         # 检查是否正确写入配置内容
         handle = mocked_file()
-        config_save_fixture.config.write.assert_called_once_with(handle)
+        config.config.write.assert_called_once_with(handle)
 
         # 检查更改标志是否已重置
-        assert config_save_fixture._changed is False
+        assert config._changed is False
 
 
 # 测试：如果配置没有变化，则不写入文件
-def test_config_file_set_changed(config_save_fixture):
-    config_save_fixture.set("Setting1", "Value1")
+def test_config_file_set_changed(config):
+    config.set("Setting1", "Value1")
     with patch.object(Path, "open", mock_open()) as mocked_file:
-        config_save_fixture.save()
+        config.save()
 
         # 检查文件是否以写模式打开
         mocked_file.assert_called_once_with("w")  # 检查是否调用了写入方法
 
         # 检查是否正确写入配置内容
         handle = mocked_file()
-        config_save_fixture.config.write.assert_called_once_with(handle)
+        config.config.write.assert_called_once_with(handle)
 
         # 检查更改标志是否已重置
-        assert config_save_fixture._changed is False
+        assert config._changed is False
+
+
+def test_configure_logging():
+    config = Config()
+    with patch.object(logging, "getLogger", return_value=logging.getLogger()) as mock_get_logger:
+        config.configure_logging()
+        mock_get_logger.assert_called_once()

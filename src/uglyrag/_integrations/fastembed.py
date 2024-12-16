@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastembed import TextEmbedding
 from fastembed.rerank.cross_encoder import TextCrossEncoder
 
-from uglyrag._config import config
+from uglyrag.config import config
 
 model_dir = str(config.data_dir / "models")
 

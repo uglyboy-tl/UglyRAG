@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from uglyrag._config import config
+from uglyrag.config import config
 
 _segment_module = config.get("segment", "MODULES")
 segment: Callable[[str], list[str]] | None = None

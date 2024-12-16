@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from uglyrag._config import config
+from uglyrag.config import config
 
 from ._database import Database
 from ._sqlite import SQLiteDatebase

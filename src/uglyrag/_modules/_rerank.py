@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from uglyrag._config import config
+from uglyrag.config import config
 
 _rerank_module = config.get("rerank", "MODULES")
 rerank: Callable[[str, list[str]], list[float]] | None = None

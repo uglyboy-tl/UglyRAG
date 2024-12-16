@@ -5,8 +5,8 @@ from collections.abc import Callable, Generator
 from functools import cache
 from typing import Any
 
-from uglyrag._config import config
 from uglyrag._database import Database, factory_db
+from uglyrag.config import config
 
 
 # 合并搜索结果，搜索结果的结构是 List[(id, content)]
