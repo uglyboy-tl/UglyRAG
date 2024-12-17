@@ -29,7 +29,7 @@ def test_sqlite_reset(sqlite):
 
 
 def test_sqlite_check_vault(sqlite):
-    assert sqlite.check_vault("vault")
+    assert sqlite._check_vault("vault")
 
 
 def test_sqlite_insert_data(sqlite):

@@ -29,7 +29,7 @@ def test_duckdb_reset(duckdb):
 
 
 def test_duckdb_check_vault(duckdb):
-    assert duckdb.check_vault("vault")
+    assert duckdb._check_vault("vault")
 
 
 def test_duckdb_insert_data(duckdb):
