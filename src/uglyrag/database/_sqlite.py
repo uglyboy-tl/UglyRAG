@@ -10,7 +10,7 @@ from types import TracebackType
 import sqlite_vec
 from sqlite_vec import serialize_float32
 
-from ._database import Database
+from .base import Database
 
 
 @dataclass
@@ -169,15 +169,11 @@ class SQLiteDatebase(Database):
         cursor.executemany(f"INSERT INTO {vault} (source, part_id, content) VALUES (?,?,?)", data)
 
     def check_source(self, source: str, vault: str) -> bool:
-        if not self.check_vault(vault):
-            raise Exception("No such vault")
         result = self.conn.execute(f"SELECT EXISTS(SELECT 1 FROM {vault} WHERE source=?)", (source,)).fetchone()
         assert result is not None
         return result[0] == 1
 
     def del_source(self, source: str, vault: str) -> bool:
-        if not self.check_vault(vault):
-            raise Exception("No such vault")
         cursor = self.conn.cursor()
         try:
             cursor.execute(f"DELETE FROM {vault} WHERE source=?", (source,))

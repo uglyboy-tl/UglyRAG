@@ -6,7 +6,7 @@ from pathlib import Path
 
 from duckdb import DuckDBPyConnection, Error, connect
 
-from ._database import Database
+from .base import Database
 
 
 @dataclass
@@ -109,8 +109,6 @@ class DuckDBDatabase(Database):
         """
         重建全文搜索索引
         """
-        if not self.check_vault(vault):
-            raise Exception("No such vault")
         with self.conn.cursor() as cursor:
             cursor.execute(f"PRAGMA create_fts_index({vault}, id, content_fts, overwrite = 1)")
 
@@ -118,8 +116,6 @@ class DuckDBDatabase(Database):
         """
         检查特定来源的数据是否存在
         """
-        if not self.check_vault(vault):
-            raise Exception("No such vault")
         result = self.conn.execute(f"SELECT EXISTS(SELECT 1 FROM {vault} WHERE source=?)", (source,)).fetchone()
         assert result is not None
         return result[0] == 1
@@ -128,8 +124,6 @@ class DuckDBDatabase(Database):
         """
         删除特定来源的数据
         """
-        if not self.check_vault(vault):
-            raise Exception("No such vault")
         try:
             with self.conn.cursor() as cursor:
                 cursor.execute(f"DELETE FROM {vault} WHERE source=?", (source,))
