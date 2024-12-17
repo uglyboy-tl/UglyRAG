@@ -4,10 +4,11 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from src.uglyrag.database.base import Database
+
+from uglyrag.database.base import Database
 
 
-class TestDatabase(Database):
+class MockDatabase(Database):
     def reset(self):
         super().reset()
 
@@ -32,7 +33,7 @@ class TestDatabase(Database):
 
 @pytest.fixture
 def db():
-    return TestDatabase(db_path=Path("/tmp/test.db"), segment=lambda x: x.split(), embedding=lambda x: [0.0] * 128)
+    return MockDatabase(db_path=Path("/tmp/test.db"), segment=lambda x: x.split(), embedding=lambda x: [0.0] * 128)
 
 
 def test_post_init(db):
