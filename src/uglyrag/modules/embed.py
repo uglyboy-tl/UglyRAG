@@ -21,8 +21,3 @@ def get_embeddings_module() -> Callable[[list[str]], list[list[float]]] | None:
         print(f"get_embeddings_module: raising ImportError for {_embedding_module}")
         raise ImportError(f"No such embedding module: {_embedding_module}")
     return embeddings
-
-
-embeddings = get_embeddings_module()
-
-__all__ = ["embeddings"]

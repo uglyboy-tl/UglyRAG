@@ -15,8 +15,3 @@ def get_segment_module() -> Callable[[str], list[str]] | None:
     else:
         raise ImportError(f"No such segment module: {_segment_module}")
     return segment
-
-
-segment = get_segment_module()
-
-__all__ = ["segment"]

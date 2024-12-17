@@ -19,8 +19,3 @@ def get_rerank_module() -> Callable[[str, list[str]], list[float]] | None:
     else:
         raise ImportError(f"No such rerank module: {_rerank_module}")
     return rerank
-
-
-rerank = get_rerank_module()
-
-__all__ = ["rerank"]

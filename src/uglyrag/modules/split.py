@@ -21,8 +21,3 @@ def get_split_module() -> Callable[[str], list[tuple[str, str]]] | None:
     else:
         raise ImportError(f"No such split module: {_split_module}")
     return split
-
-
-split = get_split_module()
-
-__all__ = ["split"]

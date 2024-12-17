@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import logging
-import os
 import tempfile
 from datetime import datetime
-from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING, FileHandler, StreamHandler
+from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING, StreamHandler
 from pathlib import Path
 
 from uglyrag.logger import configure_basic_logging, configure_file_logging, configure_logger, create_formatter
