@@ -9,8 +9,6 @@ from functools import cache
 from threading import Lock
 from typing import Any
 
-from regex import E
-
 from uglyrag.config import config
 from uglyrag.database import Database
 from uglyrag.database._sqlite import SQLiteDatebase
