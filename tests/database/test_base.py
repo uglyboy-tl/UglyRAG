@@ -8,8 +8,8 @@ import pytest
 from uglyrag.database.base import Database
 
 
-class MockDatabase(Database):
-    def reset(self):
+class ConcreteDatabase(Database):
+    def reset(self) -> None:
         super().reset()
 
     def check_source(self, source: str, vault: str) -> bool:
@@ -33,19 +33,44 @@ class MockDatabase(Database):
 
 @pytest.fixture
 def db():
-    return MockDatabase(db_path=Path("/tmp/test.db"), segment=lambda x: x.split(), embedding=lambda x: [0.0] * 128)
+    return ConcreteDatabase(
+        db_path=Path("/tmp/test.db"), segment=lambda x: x.split(), embedding=lambda x: [0.1, 0.2, 0.3]
+    )
 
 
 def test_post_init(db):
-    assert db.dims == 128
+    assert db.dims == 3
+
+
+def test_invalid_db_path():
+    with pytest.raises(ValueError):
+        ConcreteDatabase(
+            db_path=Path("/tmp/test.txt"), segment=lambda x: x.split(), embedding=lambda x: [0.1, 0.2, 0.3]
+        )
+
+
+def test_enter_exit(db):
+    with db as database:
+        assert database is db
+
+
+@patch("pathlib.Path.exists", return_value=True)
+@patch("pathlib.Path.unlink")
+def test_reset(mock_unlink, mock_exists, db):
+    db.reset()
+    mock_unlink.assert_called_once()
+
+
+def test_rebuild_index(db):
+    db.rebuild_index("vault")
 
 
 def test_check_source(db):
-    assert db.check_source("source", "vault")
+    assert db.check_source("source", "vault") is True
 
 
 def test_del_source(db):
-    assert db.del_source("source", "vault")
+    assert db.del_source("source", "vault") is True
 
 
 def test_insert_data(db):
